@@ -739,6 +739,7 @@ import { BattlePresentation, muzzleKind } from './BattlePresentation.js';
             renderPartySwitchBar() {
                 const bar = document.getElementById('partySwitchBar');
                 if (!bar || !this.player) return;
+                bar.classList.toggle('party-switch-bar--six', this.playerParty.length > 3);
                 if (bar.children.length !== this.playerParty.length) {
                     bar.replaceChildren(...this.playerParty.map((_, i) => {
                         const button = document.createElement('button');

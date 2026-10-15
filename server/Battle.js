@@ -3,9 +3,10 @@ import { SENDOUT_DURATION, RECALL_DURATION } from '../src/game/BattleTimings.js'
 import { readFileSync } from 'node:fs';
 export const catalog = JSON.parse(readFileSync(new URL('./data/catalog.json', import.meta.url)));
 
-export function validateTeam(team) {
-    if (!Array.isArray(team) || team.length !== 3 || team.some(id => !Number.isInteger(id) || !catalog[id])) throw new Error('Choose three Pokémon from the PvP roster.');
-    if (new Set(team).size !== 3) throw new Error('Choose three different Pokémon.');
+export function validateTeam(team, teamSize = 3) {
+    if (![3, 6].includes(teamSize)) throw new Error('Choose the 3-Pokémon or 6-Pokémon format.');
+    if (!Array.isArray(team) || team.length !== teamSize || team.some(id => !Number.isInteger(id) || !catalog[id])) throw new Error(`Choose ${teamSize} Pokémon from the PvP roster.`);
+    if (new Set(team).size !== teamSize) throw new Error(`Choose ${teamSize} different Pokémon.`);
     return [...team];
 }
 
@@ -20,8 +21,8 @@ function wireAttack(a) {
 }
 
 export class Battle {
-    constructor(teams, stadium = 'grassy', names = ['Trainer 1', 'Trainer 2']) {
-        this.teams = teams.map((team, side) => validateTeam(team).map((id, index) => ({ ...structuredClone(catalog[id]), uid: `${side}:${index}`, side })));
+    constructor(teams, stadium = 'grassy', names = ['Trainer 1', 'Trainer 2'], teamSize = 3) {
+        this.teams = teams.map((team, side) => validateTeam(team, teamSize).map((id, index) => ({ ...structuredClone(catalog[id]), uid: `${side}:${index}`, side })));
         this.active = [0, 0]; this.inputs = [{}, {}]; this.bonds = [0, 0]; this.bursts = [0, 0]; this.signatures = [false, false];
         this.currentStadium = stadium; this.playerTrainer = names[0]; this.enemyTrainer = names[1];
         this.WORLD_HALF_W = 470; this.WORLD_HALF_H = 255;

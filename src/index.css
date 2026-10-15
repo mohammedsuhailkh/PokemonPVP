@@ -221,6 +221,19 @@ body { overflow:hidden; }
 .pvp-panel button:disabled { opacity:.5; cursor:default; }
 .pvp-actions { display:flex; gap:10px; margin:14px 0; flex-wrap:wrap; }
 .pvp-team { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+.pvp-team .pvp-slot { min-width:0; margin:4px 0; padding:7px; border:1px solid #476277; border-radius:8px; background:#0a1c2c; }
+.pvp-team .pvp-slot.is-selected { border-color:#f4d880; box-shadow:0 0 0 1px #f4d880; }
+.pvp-slot select { font-size:11px; padding:7px 2px; }
+.pvp-slot button { width:100%; margin-top:7px; padding:5px 2px; font-size:9px; }
+.pvp-panel .pvp-hint { font-size:11px; color:#b2cddd; }
+.pvp-roster { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; max-height:200px; overflow-y:auto; padding:3px; margin:10px 0 18px; border:1px solid #476277; border-radius:8px; }
+.pvp-roster button { display:flex; flex-direction:column; gap:5px; padding:10px 7px; text-align:left; min-width:0; background:#193b50; color:#eaf6ff; border:1px solid #628598; }
+.pvp-roster button strong { font-size:11px; overflow-wrap:anywhere; }
+.pvp-roster button span { font-size:10px; text-transform:capitalize; color:#b6d9e9; }
+.pvp-roster button small { font-size:9px; color:#f4d880; }
+.pvp-roster>p { grid-column:1/-1; padding:10px; }
+.pvp-panel button:focus-visible,.pvp-panel select:focus-visible,.pvp-panel input:focus-visible { outline:2px solid #8cdefa; outline-offset:2px; }
+@media(max-width:600px) { .pvp-roster { grid-template-columns:repeat(2,minmax(0,1fr)); } .pvp-team { gap:5px; } .pvp-team .pvp-slot { padding:5px; } }
 .pvp-code { font:800 25px monospace; letter-spacing:3px; color:#f4d880; user-select:text; }
 @media(max-width:600px) { .network-status { top:86px; font-size:8px; } .pvp-panel { padding:16px; } }
 @media(max-width:600px) { .arena-actions { bottom:232px; } .touch-movement { bottom:232px; } }
@@ -401,4 +414,14 @@ body { overflow:hidden; }
 .squad-switch:disabled:not(.is-active) { opacity:.45; }
 .squad-switch:not(:disabled):hover,.squad-switch:focus-visible { outline:2px solid #7dd3fc; outline-offset:2px; }
 @media(max-width:600px) { .party-switch-bar>button.squad-switch { min-width:58px; min-height:40px; padding:4px!important; } .squad-switch .switch-name { font-size:8px; } .squad-switch .switch-status { font-size:6px; } }
+.party-switch-bar--six { min-width:0; flex:1; justify-content:flex-start; overflow-x:auto; padding:3px; scrollbar-width:thin; }
+.party-switch-bar--six>button { flex-shrink:0; }
+@media(max-width:900px) { .party-switch-bar--six { flex-basis:100%; order:3; margin-left:0; } .dock-status-row:has(.party-switch-bar--six) { flex-wrap:wrap; } }
+@media(max-width:600px) {
+    .battle-dock:has(.party-switch-bar--six) .party-switch-bar--six>button.squad-switch { min-width:0; flex:1; padding:3px 2px!important; }
+    .party-switch-bar--six .switch-name { max-width:46px; overflow:hidden; text-overflow:ellipsis; font-size:7px; }
+    .party-switch-bar--six .switch-status { font-size:5px; }
+    .arena-shell:has(.party-switch-bar--six) .arena-actions { bottom:240px; }
+    .arena-shell:has(.party-switch-bar--six) .touch-movement { bottom:240px; }
+}
 

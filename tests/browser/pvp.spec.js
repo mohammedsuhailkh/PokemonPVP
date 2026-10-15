@@ -1,5 +1,60 @@
 import { test, expect } from '@playwright/test';
 
+test('searchable six-Pokémon rooms synchronize format and support the sixth switch on mobile', async ({ browser }) => {
+    test.setTimeout(90000);
+    const ac = await browser.newContext(), bc = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const a = await ac.newPage(), b = await bc.newPage(), errors = [];
+    for (const p of [a, b]) p.on('pageerror', e => errors.push(e.message));
+    try {
+        await Promise.all([a.goto('/'), b.goto('/')]);
+        for (const p of [a, b]) { await p.waitForFunction(() => window.GameEngine && !window.GameEngine.loading); await p.getByRole('button', { name: 'PLAY ONLINE PvP', exact: true }).click(); }
+        await a.getByRole('button', { name: 'CREATE ROOM', exact: true }).click();
+        await expect(a.locator('.pvp-code')).toHaveText(/[A-F0-9]{6}/);
+        await a.getByLabel('Online battle format').selectOption('6');
+        await expect(a.getByLabel('Online Pokemon 6', { exact: true })).toBeVisible();
+        await b.getByLabel('Room code', { exact: true }).fill(await a.locator('.pvp-code').textContent());
+        await b.getByRole('button', { name: 'JOIN ROOM', exact: true }).click();
+        await expect(b.getByLabel('Online battle format')).toHaveValue('6');
+        await expect(b.getByLabel('Online battle format')).toBeDisabled();
+        await a.getByLabel('Search online Pokémon').fill('mEwTwO');
+        await expect(a.locator('.pvp-roster button')).toHaveCount(1);
+        await a.getByRole('button', { name: 'Choose MEWTWO', exact: true }).click();
+        await expect(a.getByLabel('Online Pokemon 1', { exact: true })).toHaveValue('150');
+        await expect(a.getByRole('button', { name: 'Choose MEWTWO', exact: true })).toBeDisabled();
+        await a.getByLabel('Search online Pokémon').fill('not-a-pokemon');
+        await expect(a.getByText('No matches in the online roster.', { exact: false })).toBeVisible();
+        await a.getByLabel('Search online Pokémon').fill('electric');
+        await expect(a.getByRole('button', { name: 'Choose PIKACHU', exact: true })).toBeVisible();
+        await a.screenshot({ path: 'test-results/pvp-search-desktop.png' });
+        await b.getByRole('button', { name: 'Search for slot 6', exact: true }).click();
+        await b.getByLabel('Search online Pokémon').fill('#212');
+        await expect(b.locator('.pvp-roster button')).toHaveCount(1);
+        await b.getByRole('button', { name: 'Choose SCIZOR', exact: true }).click();
+        await expect(b.getByLabel('Online Pokemon 6', { exact: true })).toHaveValue('212');
+        await b.getByLabel('Search online Pokémon').fill('');
+        await b.getByLabel('Online battle format').scrollIntoViewIfNeeded();
+        await b.screenshot({ path: 'test-results/pvp-search-mobile.png' });
+        await a.getByRole('button', { name: 'READY TO BATTLE' }).click(); await b.getByRole('button', { name: 'READY TO BATTLE' }).click();
+        for (const p of [a, b]) await p.waitForFunction(() => window.GameEngine.online?.status === 'battle' && !window.GameEngine.loading && !window.GameEngine.spriteAnimator.busy && !window.GameEngine.online.state.locked);
+        await expect(b.locator('#partySwitchBar button')).toHaveCount(6);
+        const dock = await b.locator('.battle-dock').boundingBox();
+        for (const selector of ['.arena-actions', '.touch-movement']) {
+            const controls = await b.locator(selector).boundingBox();
+            expect(controls.y + controls.height).toBeLessThanOrEqual(dock.y);
+        }
+        const sixth = b.getByRole('button', { name: /^Switch to SCIZOR$/i });
+        await expect(sixth).toBeInViewport(); await sixth.click();
+        await expect(b.locator('#playerNameHud')).toHaveText('SCIZOR');
+        await expect(a.locator('#enemyNameHud')).toHaveText('SCIZOR');
+        await b.screenshot({ path: 'test-results/pvp-six-mobile.png' });
+        await a.screenshot({ path: 'test-results/pvp-six-desktop.png' });
+        await b.reload();
+        await b.waitForFunction(() => window.GameEngine.online?.active && !window.GameEngine.loading && window.GameEngine.player?.id === 212);
+        await expect(b.locator('#partySwitchBar button')).toHaveCount(6);
+        expect(errors).toEqual([]);
+    } finally { await ac.close(); await bc.close(); }
+});
+
 test('two browsers play authoritative PvP, switch, reconnect and share a result', async ({ browser }) => {
     test.setTimeout(90000);
     const aContext = await browser.newContext(), bContext = await browser.newContext({ viewport: { width: 390, height: 844 } });

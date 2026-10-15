@@ -2,7 +2,9 @@
 
 ## Development
 
-Use Node.js 22 or newer. Run `npm ci`, then start `npm run server` in one terminal and `npm run dev` in another. Open the Vite URL, choose **PLAY ONLINE PvP**, and create a room. A second browser or device joins with its six-character room code. Each trainer chooses three distinct Pokémon and presses Ready.
+Use Node.js 22 or newer. Run `npm ci`, then start `npm run server` in one terminal and `npm run dev` in another. Open the Vite URL, choose **PLAY ONLINE PvP**, and create a room. A second browser or device joins with its six-character room code. The host selects a 3v3 or 6v6 battle format; both trainers must choose that many distinct Pokémon and press Ready. Changing format resets both ready checks. Rematches keep the format.
+
+Choose **EDIT SLOT** to target a team slot, then search by Pokémon name, Pokédex number (with or without `#`), or type and select a result. Selection advances to the next slot. Slot dropdowns also remain available; duplicate picks are disabled. Search covers the curated online roster, not the full offline Pokédex. These formats are single private battles, without a multi-round tournament bracket.
 
 The initial PvP roster contains 27 curated species with server-owned stats and moves. Offline custom selection remains available independently. Refresh the catalog deliberately with `node scripts/build-pvp-catalog.mjs` when changing PvP balance.
 

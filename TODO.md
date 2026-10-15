@@ -4,6 +4,7 @@
   - [x] Extract shared combat simulation from browser rendering and audio.
   - [x] Run authoritative battles on a Node.js server with WebSockets.
   - [x] Support private room codes, 27-species team selection, ready checks, switching, shared results and rematches.
+  - [x] Add name/number/type search and host-selected 3v3 or 6v6 teams, with synchronized ready checks and six-member switching.
   - [x] Add bounded local movement prediction, opponent interpolation, ping, and a 30-second reconnect window.
   - [x] Validate teams, resources, movement and actions on the server; limit message sizes, rates and room count.
   - [x] Test two independent browser clients, mobile layout, delayed input, refresh/reconnect, forfeit, malformed messages and offline regressions.

@@ -34,12 +34,12 @@ export function createPvpServer({ reconnectMs = 30000, maxRooms = 12 } = {}) {
         wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws));
     });
     function roomInfo(room) {
-        return { type: 'room', code: room.code, phase: room.phase, stadium: room.stadium,
+        return { type: 'room', code: room.code, phase: room.phase, stadium: room.stadium, teamSize: room.teamSize,
             players: room.players.map(p => p ? { name: p.name, connected: !!p.ws, ready: p.ready, team: p.team } : null) };
     }
     function notify(room) { room.players.forEach(p => send(p?.ws, roomInfo(room))); }
     function begin(room) {
-        room.battle = new Battle(room.players.map(p => p.team), room.stadium, room.players.map(p => p.name));
+        room.battle = new Battle(room.players.map(p => p.team), room.stadium, room.players.map(p => p.name), room.teamSize);
         room.phase = 'loading'; room.loaded = [false, false]; room.loadStarted = Date.now();
         room.players.forEach(p => { p.lastEvent = 0; });
         room.players.forEach((p, side) => send(p.ws, { type: 'init', side, names: room.players.map(p => p.name), state: room.battle.snapshot() }));
@@ -76,20 +76,31 @@ export function createPvpServer({ reconnectMs = 30000, maxRooms = 12 } = {}) {
                     if (m.type === 'create') {
                         if (rooms.size >= maxRooms) throw new Error('Server is full. Please try again later.');
                         let code; do { code = randomBytes(4).toString('hex').slice(0, 6).toUpperCase(); } while (rooms.has(code));
-                        room = { code, phase: 'lobby', stadium: 'grassy', players: [null, null], created: Date.now() }; rooms.set(code, room); side = 0;
+                        room = { code, phase: 'lobby', stadium: 'grassy', teamSize: 3, players: [null, null], created: Date.now() }; rooms.set(code, room); side = 0;
                     } else {
                         room = rooms.get(String(m.code).toUpperCase());
                         side = room?.players.findIndex(p => !p);
                         if (!room || room.phase !== 'lobby' || side < 0) throw new Error('Room not found or already full.');
                     }
-                    room.players[side] = { name, token: randomBytes(24).toString('hex'), ws: null, ready: false, team: [25, 6, 448] };
+                    room.players[side] = { name, token: randomBytes(24).toString('hex'), ws: null, ready: false, team: [25, 6, 448, 9, 445, 658].slice(0, room.teamSize) };
                     attach(ws, room, side); return;
                 }
                 const room = ws.room, side = ws.side;
                 if (!room || room.players[side]?.ws !== ws) throw new Error('Join a room first.');
                 if (m.type === 'leave') { if (room.battle && !room.battle.matchOver) room.battle.finish(1 - side, 'forfeit'); room.players[side].token = ''; ws.close(1000, 'Left room'); return; }
-                if (m.type === 'ready' && room.phase === 'lobby') {
-                    room.players[side].team = validateTeam(m.team); room.players[side].ready = true;
+                if (m.type === 'format' && room.phase === 'lobby') {
+                    if (side !== 0) throw new Error('Only the host can change the battle format.');
+                    if (![3, 6].includes(m.teamSize)) throw new Error('Choose the 3-Pokémon or 6-Pokémon format.');
+                    if (room.teamSize !== m.teamSize) {
+                        room.teamSize = m.teamSize;
+                        room.players.forEach(p => { if (p) {
+                            p.ready = false;
+                            p.team = [...new Set([...p.team, ...Object.values(catalog).map(p => p.id)])].slice(0, room.teamSize);
+                        } });
+                    }
+                    notify(room);
+                } else if (m.type === 'ready' && room.phase === 'lobby') {
+                    room.players[side].team = validateTeam(m.team, room.teamSize); room.players[side].ready = true;
                     if (side === 0 && ['grassy', 'rocky', 'magma', 'ice_water'].includes(m.stadium)) room.stadium = m.stadium;
                     notify(room);
                     if (room.players.every(p => p?.ws && p.ready)) begin(room);

@@ -146,7 +146,9 @@ responses and stadium ambience, including reduced-motion behavior.
 ## Online private rooms
 
 Choose **PLAY ONLINE PvP**, create a room and share its code. Both trainers select
-three Pokémon from the curated roster and press Ready. The Node.js server owns
+three or six distinct Pokémon from the searchable curated roster and press Ready.
+The host chooses the 3v3 or 6v6 format for both players. Search by name, number,
+or type, then add a result to the selected team slot. The Node.js server owns
 combat, movement, resources and results. Refresh reconnects the same tab within
 30 seconds; leaving forfeits. Offline AI battles remain available separately.
 

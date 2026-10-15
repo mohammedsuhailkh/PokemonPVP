@@ -35,6 +35,25 @@ test('switches and knockouts preserve resources, lock combat and produce one sha
     assert.equal(b.winner, 0); assert.equal(b.snapshot().matchOver, true);
 });
 
+test('six-member battles validate exact format and require all six knockouts', () => {
+    const full = [25, 6, 448, 9, 445, 658];
+    assert.deepEqual(validateTeam(full, 6), full);
+    assert.throws(() => validateTeam(full));
+    assert.throws(() => validateTeam(full.slice(0, 3), 6));
+    assert.throws(() => validateTeam(full, 4));
+    assert.throws(() => validateTeam([25, 6, 448, 9, 445, 25], 6));
+    assert.throws(() => new Battle([full, teams[1]], 'grassy', undefined, 6));
+    const b = new Battle([full, full], 'grassy', undefined, 6); b.start(); advance(b, 2);
+    assert.equal(b.command(0, { action: 'switch', index: 5 }), true);
+    advance(b, 4); assert.equal(b.player.id, 658);
+    for (let i = 0; i < 6; i++) {
+        const target = b.enemy;
+        target.currentHp = 0; b.handleFaint(target); advance(b, 4);
+        assert.equal(b.matchOver, i === 5);
+    }
+    assert.equal(b.winner, 0);
+});
+
 async function peer(url) {
     const ws = new WebSocket(url); const messages = [];
     ws.on('message', raw => messages.push(JSON.parse(raw)));
@@ -49,6 +68,31 @@ async function peer(url) {
         throw new Error(`Timed out waiting for ${type}`);
     } };
 }
+
+test('host format changes synchronize teams, reset readiness and reject wrong sizes', async t => {
+    const { server, rooms } = createPvpServer(); server.listen(0, '127.0.0.1'); await once(server, 'listening');
+    const url = `ws://127.0.0.1:${server.address().port}/ws`, a = await peer(url), b = await peer(url);
+    t.after(() => { a.ws.terminate(); b.ws.terminate(); server.close(); });
+    a.send({ type: 'create', name: 'Host' }); const { code } = await a.wait('joined');
+    b.send({ type: 'join', code, name: 'Guest' }); await b.wait('joined');
+    b.send({ type: 'ready', team: teams[1] }); await a.wait('room', m => m.players[1]?.ready);
+    b.send({ type: 'format', teamSize: 6 }); await b.wait('error', m => /host/.test(m.message));
+    a.send({ type: 'format', teamSize: 5 }); await a.wait('error');
+    a.send({ type: 'format', teamSize: 6 }); await b.wait('room', m => m.teamSize === 6);
+    const room = rooms.get(code);
+    assert.ok(room.players.every(p => !p.ready && p.team.length === 6 && new Set(p.team).size === 6));
+    a.send({ type: 'ready', team: teams[0] }); await a.wait('error', m => /Choose 6/.test(m.message));
+    assert.equal(room.players[0].ready, false);
+    a.send({ type: 'ready', team: room.players[0].team }); b.send({ type: 'ready', team: room.players[1].team });
+    assert.equal((await a.wait('init')).state.teams[0].length, 6);
+    await b.wait('init');
+    room.battle.finish(0); a.messages.length = 0;
+    a.send({ type: 'rematch' }); await a.wait('room', m => m.phase === 'lobby');
+    assert.equal(room.teamSize, 6);
+    b.messages.length = 0;
+    a.send({ type: 'format', teamSize: 3 }); await b.wait('room', m => m.teamSize === 3 && m.players.every(p => p?.team.length === 3));
+    assert.ok(room.players.every(p => !p.ready && p.team.length === 3));
+});
 
 test('two real sockets create, join, reject a third player, reconnect and forfeit', async t => {
     const { server, rooms } = createPvpServer({ reconnectMs: 180 }); server.listen(0, '127.0.0.1'); await once(server, 'listening');
