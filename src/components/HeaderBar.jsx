@@ -5,7 +5,7 @@ import { STADIUM_THEMES } from '../game/constants.js';
 
 export default function HeaderBar({
     onOpenStartMenu, onOpenRosterModal, onOpenHelpModal, soundEnabled, setSoundEnabled,
-    aimMode, setAimMode, selectedRivalry, setSelectedRivalry, currentStadium, onSelectStadium
+    aimMode, setAimMode, selectedRivalry, setSelectedRivalry, currentStadium, onSelectStadium, onOpenPvp, onlineActive
 }) {
     return (
         <header className="game-toolbar">
@@ -13,13 +13,14 @@ export default function HeaderBar({
                 <span className="brand-pokeball" aria-hidden="true" /><strong>POKÉANIME</strong><small>STADIUM LEAGUE</small>
             </button>
             <nav className="toolbar-controls" aria-label="Game settings">
+                <button className="toolbar-primary" onClick={onOpenPvp}>ONLINE PvP</button>
                 <button className="toolbar-primary" onClick={onOpenStartMenu}>SELECT SQUAD</button>
                 <label className="stadium-select-label"><i aria-hidden="true" className="fa-solid fa-earth-asia" />
-                    <select id="stadiumSelect" aria-label="Stadium" value={currentStadium} onChange={e => onSelectStadium(e.target.value)}>
+                    <select id="stadiumSelect" aria-label="Stadium" disabled={onlineActive} value={currentStadium} onChange={e => onSelectStadium(e.target.value)}>
                         {Object.values(STADIUM_THEMES).map(theme => <option key={theme.id} value={theme.id}>{theme.shortName}</option>)}
                     </select>
                 </label>
-                <select id="rivalrySelect" aria-label="Match preset" className="toolbar-rivalry" value={selectedRivalry}
+                <select id="rivalrySelect" aria-label="Match preset" disabled={onlineActive} className="toolbar-rivalry" value={selectedRivalry}
                     onChange={e => { setSelectedRivalry(e.target.value); GameEngine.initMatch(e.target.value); }}>
                     <option value="ash_gary">Ash vs. Gary</option><option value="ash_alain">Ash vs. Alain</option>
                     <option value="red_cynthia">Red vs. Cynthia</option><option value="arceus_legends">Creation Trio vs. Legends</option>

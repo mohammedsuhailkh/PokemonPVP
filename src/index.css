@@ -209,6 +209,21 @@ body { overflow:hidden; }
 .pokemon-animation-canvas { position:absolute; pointer-events:none; image-rendering:pixelated; max-width:none; }
 .departing-pokemon { pointer-events:none; }
 .pokeball-sequence { position:absolute; left:0; top:0; width:96px; height:96px; max-width:none; pointer-events:none; }
+.network-status { position:absolute; top:76px; left:50%; transform:translateX(-50%); z-index:34; color:#d4f4ff; background:#0c2134e8; border:1px solid #678897; border-radius:5px; padding:4px 9px; font-size:10px; pointer-events:none; }
+.pvp-overlay { position:fixed; inset:0; z-index:100; display:flex; align-items:center; justify-content:center; background:#020617e8; padding:16px; overflow:auto; }
+.pvp-panel { width:min(580px,100%); max-height:94dvh; overflow:auto; padding:24px; background:#102638; border:2px solid #d2bd77; border-radius:16px; color:#eef6ff; }
+.pvp-panel h2 { font-weight:900; font-size:24px; color:#f4d880; }
+.pvp-panel p { margin:12px 0; font-size:13px; }
+.pvp-panel [role=alert] { color:#fda4af; }
+.pvp-panel label { display:block; font-size:12px; margin:12px 0; }
+.pvp-panel input,.pvp-panel select { display:block; width:100%; padding:9px; margin-top:5px; border:1px solid #5c7f92; border-radius:6px; background:#081725; color:white; }
+.pvp-panel button { padding:10px 13px; background:#e4c779; color:#142737; border-radius:6px; font-weight:800; font-size:12px; cursor:pointer; }
+.pvp-panel button:disabled { opacity:.5; cursor:default; }
+.pvp-actions { display:flex; gap:10px; margin:14px 0; flex-wrap:wrap; }
+.pvp-team { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+.pvp-code { font:800 25px monospace; letter-spacing:3px; color:#f4d880; user-select:text; }
+@media(max-width:600px) { .network-status { top:86px; font-size:8px; } .pvp-panel { padding:16px; } }
+@media(max-width:600px) { .arena-actions { bottom:232px; } .touch-movement { bottom:232px; } }
 .world-sprite-actor { position:absolute; top:0; left:0; pointer-events:none; }
 .sprite-pixelated { filter:drop-shadow(0 1px 1px #10182066); }
 .world-rock { position:absolute; top:0; left:0; pointer-events:none; }

@@ -142,3 +142,14 @@ as a fallback. See [animation coverage and credits](docs/pokemon-animations.md).
 The [battle visual pass](docs/battle-visuals.md) adds court contrast, altitude-aware
 shadows, movement effects, source attachment markers, type accents, small camera
 responses and stadium ambience, including reduced-motion behavior.
+
+## Online private rooms
+
+Choose **PLAY ONLINE PvP**, create a room and share its code. Both trainers select
+three Pokémon from the curated roster and press Ready. The Node.js server owns
+combat, movement, resources and results. Refresh reconnects the same tab within
+30 seconds; leaving forfeits. Offline AI battles remain available separately.
+
+Development: run `npm run server` and `npm run dev` in separate terminals.
+Production: run `npm run build`, then `npm start`. See the [PvP and Render guide](docs/online-pvp.md)
+for deployment, tests, network behavior and prototype limitations.

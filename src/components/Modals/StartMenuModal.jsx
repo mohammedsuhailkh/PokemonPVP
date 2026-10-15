@@ -280,6 +280,7 @@ export default function StartMenuModal({ isOpen, onClose, currentStadium, onSele
                     </div>
 
                     <div className="flex items-center gap-2">
+                        <button type="button" onClick={() => window.dispatchEvent(new Event('pvp:open'))} className="px-3 py-2 rounded-xl bg-cyan-950 border border-cyan-500 text-xs font-bold text-cyan-200">PLAY ONLINE PvP</button>
                         <button
                             type="button"
                             onClick={handleTrainingBattle}

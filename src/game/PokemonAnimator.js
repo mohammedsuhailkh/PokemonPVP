@@ -1,7 +1,6 @@
 import { SoundEngine } from './SoundEngine.js';
-export const SENDOUT_DURATION = 1.7;
-export const RELEASE_TIME = 1.1;
-export const RECALL_DURATION = 1.25;
+import { SENDOUT_DURATION, RELEASE_TIME, RECALL_DURATION } from './BattleTimings.js';
+export { SENDOUT_DURATION, RELEASE_TIME, RECALL_DURATION };
 const REVISION = 'e7868e9a7f6b931d1fb826756a490d4633879d03';
 const REMOTE = `https://raw.githubusercontent.com/PMDCollab/SpriteCollab/${REVISION}/sprite/`;
 const NAMES = ['Idle', 'Walk', 'Attack', 'Shoot', 'Charge', 'Hurt', 'Hop', 'Cringe', 'Faint', 'Sleep'];

@@ -7,10 +7,16 @@ import { projectGround, unprojectGround, fighterSpriteSize, traceGroundCircle } 
 import { renderArenaBackground } from './ArenaRenderer.js';
 import { PokemonAnimator } from './PokemonAnimator.js';
 import { renderPokeballs } from './PokeballRenderer.js';
-import { BattlePresentation } from './BattlePresentation.js';
+import { BattlePresentation, muzzleKind } from './BattlePresentation.js';
 
         export const GameEngine = {
             ...CombatSystem,
+            audio: SoundEngine,
+            uiElement(id) { return document.getElementById(id); },
+            setOverlay(id, opacity) { const el = this.uiElement(id); if (el) el.style.opacity = opacity; },
+            captureVisualOrigin(owner, x, y, move) {
+                return owner ? { x, y, z: owner.z, id: owner.id, speciesId: owner.speciesId, height: owner.height, visualAnchor: this.spriteAnimator.attachment(owner, muzzleKind(owner, move)) } : null;
+            },
             moveAnimations: null,
             spriteAnimator: new PokemonAnimator(),
             presentation: new BattlePresentation(),
@@ -103,6 +109,7 @@ import { BattlePresentation } from './BattlePresentation.js';
             },
 
             setStadium(stadiumKey) {
+                if (this.online?.active && !this.online.applying) return;
                 if (STADIUM_THEMES[stadiumKey]) {
                     this.currentStadium = stadiumKey;
                     const sum = document.getElementById('fieldStatusSummary');
@@ -176,7 +183,7 @@ import { BattlePresentation } from './BattlePresentation.js';
                     this.effectsCtx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
                 }
                 const center = projectGround(0, 0, 0, this.width, this.height);
-                this.camera.zoom = center.scale;
+                this.camera.zoom = 1;
                 this.Y_SCALE = center.scaleY / center.scale;
                 this.updateActors();
             },
@@ -307,6 +314,7 @@ import { BattlePresentation } from './BattlePresentation.js';
             },
 
             async initMatch(rivalryKey = 'ash_gary', customTeams = null) {
+                if (this.online?.active) return false;
                 const requestId = ++this.matchRequestId;
                 const rivalry = customTeams || RIVALRIES[rivalryKey] || RIVALRIES.ash_gary;
                 this.loading = true;
@@ -381,6 +389,7 @@ import { BattlePresentation } from './BattlePresentation.js';
             },
 
             clearInput() {
+                if (this.online) this.online.guardHeld = false;
                 this.queuedMove = null;
                 this.attackFeedback = null;
                 this.keys = {}; this.joyVec = { x: 0, y: 0, active: false }; this.flyHeld = false;
@@ -473,13 +482,14 @@ import { BattlePresentation } from './BattlePresentation.js';
                 if (!this.paused && !this.loading) this.presentation.update(elapsed, this);
                 if (this.mouseScreen) this.mouseWorld = this.screenToWorld(this.mouseScreen.x, this.mouseScreen.y);
                 if (!this.paused && !this.loading) this.spriteAnimator.tick(elapsed, this);
-                if (!this.paused && !this.loading && this.spriteAnimator.busy) this.updateTransientVisuals(elapsed);
+                if (!this.online?.active && !this.paused && !this.loading && this.spriteAnimator.busy) this.updateTransientVisuals(elapsed);
+                if (this.online?.active && !this.loading) this.online.tick(elapsed);
                 if (this.pendingResult && !this.paused && !this.loading && !this.spriteAnimator.busy) {
                     if (this.matchOver && this.pendingResult.requestId === this.matchRequestId) this.pendingResult.modal.classList.remove('hidden');
                     this.pendingResult = null;
                 }
                 if (this.matchOver && !this.paused) this.updateActors();
-                if (!this.matchOver && !this.paused && !this.loading) {
+                if (!this.online?.active && !this.matchOver && !this.paused && !this.loading) {
                     this.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
                     const stopped = this.hitStopTimer > 0;
                     this.hitStopTimer = Math.max(0, this.hitStopTimer - elapsed);
@@ -664,7 +674,7 @@ import { BattlePresentation } from './BattlePresentation.js';
                     badge.textContent = state || '';
                     badge.className = `${state ? '' : 'hidden'} text-[9px] font-black px-1.5 py-0.5 rounded uppercase bg-amber-950 text-amber-300`;
                 }
-                document.getElementById('enemyAiStateBadge').textContent = `AI: ${this.ai.state}`;
+                document.getElementById('enemyAiStateBadge').textContent = this.online?.active ? 'ONLINE OPPONENT' : `AI: ${this.ai.state}`;
                 document.getElementById('enemyStaminaText').textContent = `${Math.floor(e.stamina)}%`;
                 this.setKeyVisual('btnGuard', p.guarding);
                 const fly = document.getElementById('btnFly');
@@ -918,3 +928,25 @@ import { BattlePresentation } from './BattlePresentation.js';
                 });
             }
         };
+
+// Online commands go to the authoritative server; offline simulation stays local.
+for (const [method, action] of Object.entries({ useMove: 'move', switchPokemon: 'switch', triggerDodgeDash: 'dodge', triggerCounterShield: 'shield', activateOverdrive: 'overdrive' })) {
+    const offline = GameEngine[method];
+    GameEngine[method] = function (...args) {
+        if (!this.online?.active) return offline.apply(this, args);
+        const extra = {};
+        if (action === 'move' || action === 'switch') extra.index = args[0];
+        if (action === 'move' && this.aimMode === 'cursor') extra.aim = this.mouseWorld;
+        return this.online.command(action, extra);
+    };
+}
+const offlineGuard = GameEngine.setGuard;
+GameEngine.setGuard = function (active, fighter = this.player) {
+    if (!this.online?.active) return offlineGuard.call(this, active, fighter);
+    if (fighter === this.player) { this.online.guardHeld = !!active; fighter.guarding = !!active; }
+};
+const offlineRematch = GameEngine.rematch;
+GameEngine.rematch = function (...args) {
+    if (this.online?.active) { this.online.send({ type: 'rematch' }); return; }
+    return offlineRematch.apply(this, args);
+};
