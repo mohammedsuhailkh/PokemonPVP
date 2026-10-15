@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Pokémon animation credits</title>
+<style>body{max-width:900px;margin:40px auto;padding:20px;background:#0f172a;color:#e2e8f0;font:16px system-ui}a{color:#7dd3fc}pre{white-space:pre-wrap;font-size:12px}details{padding:12px;border-bottom:1px solid #334155}</style></head>
+<body><h1>Pokémon character animation credits</h1>
+<p>Directional sprite sheets and animation metadata from <a href="https://github.com/PMDCollab/SpriteCollab">PMDCollab / SpriteCollab</a>, revision e7868e9a7f6b931d1fb826756a490d4633879d03.</p>
+<p>Individual author records are reproduced below. The collection includes official Chunsoft assets and community work; consult the <a href="LICENSE.md">original asset terms</a> and <a href="credit_names.txt">contributor names</a>. Community contributions are subject to the source's noncommercial and attribution requirements.</p>
+<main id="credits">Loading author records…</main>
+<script type="module">
+const main = document.getElementById('credits');
+try {
+    const index = await fetch('bundled.json').then(r => r.json());
+    let dynamic = {};
+    try { dynamic = JSON.parse(sessionStorage.getItem('pokemon-motion-sources') || '{}'); } catch {}
+    const sources = Object.fromEntries(index.species.map(id => [id, `/pokemon-motion/${id}/credits.txt`]));
+    Object.assign(sources, dynamic);
+    main.replaceChildren();
+    for (const [id, url] of Object.entries(sources).sort()) {
+        const details = document.createElement('details'), summary = document.createElement('summary'), pre = document.createElement('pre');
+        summary.textContent = `Pokédex ${Number(id)} — artist credits`;
+        const link = document.createElement('a'); link.href = url; link.textContent = 'Source credit record';
+        details.append(summary, link, pre); main.append(details);
+        fetch(url).then(r => { if (!r.ok) throw new Error(); return r.text(); }).then(text => { pre.textContent = text; }).catch(() => { pre.textContent = 'Unable to load author records. Follow the source link above.'; });
+    }
+} catch { main.textContent = 'Unable to load credits. Please consult the SpriteCollab repository linked above.'; }
+</script></body></html>

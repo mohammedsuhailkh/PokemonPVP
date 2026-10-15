@@ -1,0 +1,2629 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PokéAnime 2.5D Real-Time Stadium Action Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Chakra+Petch:ital,wght@0,500;0,700;1,700;1,800&family=Noto+Sans+JP:wght@900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <style>
+        :root {
+            --anime-yellow: #facc15;
+            --anime-red: #ef4444;
+            --anime-cyan: #06b6d4;
+            --anime-purple: #a855f7;
+        }
+
+        body {
+            font-family: 'Chakra Petch', sans-serif;
+            background-color: #060911;
+            color: #f8fafc;
+            overflow-x: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .font-anime-impact {
+            font-family: 'Black Ops One', cursive;
+            letter-spacing: 0.04em;
+        }
+
+        .font-katakana {
+            font-family: 'Noto Sans JP', sans-serif;
+        }
+
+        /* Skewed Anime Broadcast Panels */
+        .anime-skew {
+            transform: skewX(-12deg);
+        }
+        .anime-unskew {
+            transform: skewX(12deg);
+        }
+        .anime-skew-right {
+            transform: skewX(12deg);
+        }
+        .anime-unskew-right {
+            transform: skewX(-12deg);
+        }
+
+        .world-sprite-actor {
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform-origin: center bottom;
+            pointer-events: none;
+            will-change: transform, filter;
+        }
+
+        .sprite-pixelated {
+            image-rendering: pixelated;
+            filter: drop-shadow(0 8px 6px rgba(0, 0, 0, 0.7));
+            transition: filter 0.1s ease;
+        }
+
+        .sprite-hit-flash {
+            filter: brightness(3.2) contrast(2.2) drop-shadow(0 0 18px #ef4444) !important;
+        }
+
+        .sprite-iframe-ghost {
+            filter: brightness(1.8) sepia(1) hue-rotate(155deg) saturate(4) drop-shadow(0 0 16px #06b6d4) !important;
+            opacity: 0.85;
+        }
+
+        .sprite-overdrive-glow {
+            filter: drop-shadow(0 0 14px #facc15) drop-shadow(0 0 28px #f97316);
+        }
+
+        /* Anime Speed Lines Overlay */
+        .speed-lines {
+            background: repeating-conic-gradient(
+                from 0deg,
+                rgba(255, 255, 255, 0.0) 0deg 4.5deg,
+                rgba(255, 255, 255, 0.14) 4.5deg 5.5deg,
+                rgba(255, 255, 255, 0.0) 5.5deg 12deg
+            );
+            animation: spinLines 0.35s linear infinite;
+        }
+        @keyframes spinLines {
+            0% { transform: scale(2.1) rotate(0deg); }
+            100% { transform: scale(2.1) rotate(12deg); }
+        }
+
+        /* Callout Slash Banner Animation */
+        @keyframes slashSlide {
+            0% { transform: translateX(-110%) skewY(-2.5deg); opacity: 0; }
+            12% { transform: translateX(0%) skewY(-2.5deg); opacity: 1; }
+            86% { transform: translateX(0%) skewY(-2.5deg); opacity: 1; }
+            100% { transform: translateX(110%) skewY(-2.5deg); opacity: 0; }
+        }
+        .banner-slash-active {
+            animation: slashSlide 1.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Interactive Keyboard Keycap Styling */
+        .keycap {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 1.45rem;
+            height: 1.45rem;
+            padding: 0 0.35rem;
+            font-family: 'Chakra Petch', monospace;
+            font-weight: 800;
+            font-size: 0.68rem;
+            line-height: 1;
+            color: #e2e8f0;
+            background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+            border: 1px solid #475569;
+            border-bottom-width: 3px;
+            border-radius: 0.375rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            transition: all 0.06s ease;
+        }
+        .keycap-active {
+            transform: translateY(2px);
+            border-bottom-width: 1px;
+            background: linear-gradient(180deg, #22d3ee 0%, #0284c7 100%) !important;
+            color: #020617 !important;
+            border-color: #bae6fd !important;
+            box-shadow: 0 0 12px rgba(34, 211, 238, 0.8);
+        }
+
+        /* Glassmorphic Broadcast Card */
+        .broadcast-glass {
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.92) 0%, rgba(9, 13, 22, 0.88) 100%);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #090d16;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col justify-between bg-slate-950 text-slate-100">
+
+    <!-- TOP BROADCAST CONTROL BAR -->
+    <header class="w-full bg-slate-900/95 border-b border-slate-800 px-3 py-1.5 z-40 shadow-lg">
+        <div class="max-w-[1440px] mx-auto flex flex-wrap items-center justify-between gap-2">
+            <!-- Brand Title -->
+            <div class="flex items-center gap-2.5">
+                <div class="w-7 h-7 rounded-full bg-gradient-to-br from-red-500 via-red-600 to-white p-0.5 flex items-center justify-center shadow-md shadow-red-500/30">
+                    <div class="w-2.5 h-2.5 rounded-full bg-white border-2 border-slate-900"></div>
+                </div>
+                <div>
+                    <h1 class="font-anime-impact text-sm sm:text-base tracking-wider bg-gradient-to-r from-yellow-400 via-amber-300 to-cyan-400 bg-clip-text text-transparent leading-none">
+                        POKÉANIME 2.5D: REAL-TIME STADIUM ACTION
+                    </h1>
+                    <p class="text-[10px] text-slate-400 uppercase tracking-widest font-bold">
+                        360° Free Movement • Spatial Dodge & Counter-Shield • Live PokéAPI
+                    </p>
+                </div>
+            </div>
+
+            <!-- Active Terrain & Aim Mode Badges -->
+            <div class="hidden md:flex items-center gap-2">
+                <div id="fieldHazardCounter" class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800/90 border border-slate-700 text-[11px] font-bold text-slate-300">
+                    <i class="fa-solid fa-earth-asia text-emerald-400"></i>
+                    <span id="fieldStatusSummary">STADIUM: MASTERS EIGHT TURF</span>
+                </div>
+
+                <button id="aimModeBtn" onclick="GameEngine.toggleAimMode()" class="px-2.5 py-1 rounded-full bg-cyan-950/90 hover:bg-cyan-900 border border-cyan-500/60 text-[11px] font-bold text-cyan-300 transition flex items-center gap-1.5" title="Press [F] to toggle between Auto-Lock Target and Mouse Cursor Aim">
+                    <i class="fa-solid fa-crosshairs"></i>
+                    <span id="aimModeText">AIM: AUTO-LOCK [F]</span>
+                </button>
+            </div>
+
+            <!-- Match Presets, Custom Roster & Audio Controls -->
+            <div class="flex items-center gap-1.5">
+                <select id="rivalrySelect" class="bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-100 rounded-lg px-2 py-1 border border-slate-700 focus:outline-none focus:border-yellow-400 transition">
+                    <option value="ash_gary">Ash vs. Gary (Indigo/Johto Classics)</option>
+                    <option value="ash_alain">Ash vs. Alain (Kalos League Finals)</option>
+                    <option value="red_cynthia">Champion Red vs. Cynthia (Legends)</option>
+                    <option value="arceus_legends">★ Arceus, Dialga & Palkia vs. Rayquaza, Mewtwo & Giratina</option>
+                    <option value="mythic_titans">★ Kyogre, Groudon & Ho-Oh vs. Zekrom, Reshiram & Lugia</option>
+                </select>
+
+                <button onclick="GameEngine.openRosterModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs px-2.5 py-1 rounded-lg shadow transition flex items-center gap-1" title="Swap any Pokémon from PokéAPI">
+                    <i class="fa-solid fa-dna"></i>
+                    <span class="hidden sm:inline">POKÉAPI TEAM</span>
+                </button>
+
+                <button id="restartBtn" class="bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-extrabold text-xs px-2.5 py-1 rounded-lg shadow transition flex items-center gap-1">
+                    <i class="fa-solid fa-rotate-right"></i>
+                    <span class="hidden sm:inline">RESET</span>
+                </button>
+
+                <button id="soundToggleBtn" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs px-2 py-1 rounded-lg border border-slate-700 transition" title="Toggle Sound & Cries">
+                    <i id="soundIcon" class="fa-solid fa-volume-high text-cyan-400"></i>
+                </button>
+
+                <button id="mechanicsHelpBtn" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs px-2 py-1 rounded-lg border border-slate-700 transition" title="Controls & Anime Tactics Guide">
+                    <i class="fa-solid fa-gamepad text-yellow-400"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-[1440px] w-full mx-auto px-2 sm:px-3 py-1.5 flex flex-col gap-2 justify-between">
+
+        <!-- ==================== 2.5D REAL-TIME STADIUM VIEWPORT ==================== -->
+        <div id="arenaViewport" class="relative w-full h-[430px] sm:h-[490px] lg:h-[520px] rounded-2xl border-2 border-slate-800 bg-slate-950 shadow-2xl overflow-hidden select-none cursor-crosshair">
+
+            <!-- Primary 2.5D Stadium Canvas (Floor, Grid, Puddles, Magma, Shadows, Beams, Projectiles, Particles) -->
+            <canvas id="stadiumCanvas" class="absolute inset-0 w-full h-full block z-10"></canvas>
+
+            <!-- Hardware-Accelerated DOM Sprite Layer (For Full-Framerate Gen V Animated GIFs & Y-Sorted Pillars) -->
+            <div id="spriteStageLayer" class="absolute inset-0 w-full h-full pointer-events-none z-20 overflow-hidden">
+                <!-- Player Animated Sprite Actor -->
+                <div id="playerActor" class="world-sprite-actor">
+                    <img id="playerSpriteImg" src="" alt="Player" class="sprite-pixelated w-24 h-24 object-contain" />
+                </div>
+                <!-- Enemy Animated Sprite Actor -->
+                <div id="enemyActor" class="world-sprite-actor">
+                    <img id="enemySpriteImg" src="" alt="Enemy" class="sprite-pixelated w-24 h-24 object-contain" />
+                </div>
+            </div>
+
+            <!-- Anime Speed Lines Overlay (Triggered during Overdrive, Blitz, or Perfect Dodge) -->
+            <div id="speedLinesOverlay" class="speed-lines absolute inset-0 pointer-events-none opacity-0 transition-opacity duration-150 z-25"></div>
+
+            <!-- Slow-Mo Perfect Dodge Tint Overlay -->
+            <div id="perfectDodgeFlash" class="absolute inset-0 bg-cyan-500/20 mix-blend-screen pointer-events-none opacity-0 transition-opacity duration-150 z-25"></div>
+
+            <!-- ==================== TOP-CENTER: BROADCAST VS SCOREBOARD ==================== -->
+            <div class="hidden sm:flex absolute top-2.5 left-1/2 -translate-x-1/2 z-30 items-center gap-2.5 px-4 py-1 rounded-full broadcast-glass border border-slate-700/80 shadow-2xl pointer-events-none">
+                <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+                <span class="text-[10px] font-black tracking-widest uppercase text-amber-400">WORLD CORONATION STADIUM</span>
+                <span class="text-slate-600">|</span>
+                <span id="matchClockHud" class="font-mono text-xs font-bold text-slate-200">00:00</span>
+            </div>
+
+            <!-- ==================== TOP-LEFT: PLAYER BROADCAST HUD ==================== -->
+            <div class="absolute top-2.5 left-2.5 z-30 w-64 sm:w-80 pointer-events-none">
+                <div class="anime-skew broadcast-glass border-l-4 border-cyan-400 border-t border-r border-b border-slate-700/80 p-2.5 shadow-2xl rounded-r-xl">
+                    <div class="anime-unskew">
+                        <div class="flex items-center justify-between text-[10px] font-bold text-slate-400 mb-0.5">
+                            <span id="playerTrainerLabel" class="text-cyan-400 uppercase tracking-wider flex items-center gap-1">
+                                <i class="fa-solid fa-crown text-[9px] text-amber-400"></i>ASH KETCHUM (YOU)
+                            </span>
+                            <div id="playerPartyBalls" class="flex items-center gap-1"></div>
+                        </div>
+
+                        <div class="flex items-center justify-between gap-1 mb-1">
+                            <div class="flex items-center gap-1.5 truncate">
+                                <span id="playerNameHud" class="font-extrabold text-sm sm:text-base uppercase tracking-wide text-white truncate">PIKACHU</span>
+                                <span id="playerStatusHud" class="hidden text-[9px] font-black px-1.5 py-0.5 rounded uppercase"></span>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <div id="playerTypesHud" class="flex gap-1"></div>
+                                <span class="text-[10px] font-black px-1.5 py-0.5 rounded bg-slate-800 text-amber-400 border border-slate-700">Lv.50</span>
+                            </div>
+                        </div>
+
+                        <!-- Smooth Segmented HP Bar -->
+                        <div class="relative w-full h-3.5 bg-slate-950 rounded overflow-hidden border border-slate-700 p-0.5 shadow-inner">
+                            <div id="playerHpBar" class="h-full bg-emerald-500 rounded-xs transition-all duration-150" style="width: 100%;"></div>
+                            <div class="absolute inset-0 bg-[linear-gradient(90deg,transparent_24%,rgba(0,0,0,0.35)_25%,transparent_26%,transparent_49%,rgba(0,0,0,0.35)_50%,transparent_51%,transparent_74%,rgba(0,0,0,0.35)_75%,transparent_76%)] pointer-events-none"></div>
+                        </div>
+
+                        <div class="flex items-center justify-between mt-0.5 text-[10px] font-bold">
+                            <span class="text-slate-400">SPD <b id="playerSpeedStat" class="text-cyan-300">115</b> • ATK <b id="playerAtkStat" class="text-slate-200">110</b></span>
+                            <span id="playerHpText" class="text-slate-100 font-mono">145 / 145 HP</span>
+                        </div>
+
+                        <!-- Real-Time Stamina & Bond Sync Bars -->
+                        <div class="grid grid-cols-2 gap-2 mt-1.5 pt-1.5 border-t border-slate-800/90">
+                            <div>
+                                <div class="flex justify-between text-[9px] font-bold text-cyan-300">
+                                    <span><i class="fa-solid fa-bolt mr-0.5"></i>STAMINA</span>
+                                    <span id="playerStaminaText">100%</span>
+                                </div>
+                                <div class="w-full h-1.5 bg-slate-950 rounded overflow-hidden border border-slate-700">
+                                    <div id="playerStaminaBar" class="h-full bg-cyan-400 transition-all duration-75" style="width: 100%;"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-[9px] font-bold text-amber-300">
+                                    <span><i class="fa-solid fa-fire-flame-curved mr-0.5"></i>BOND SYNC</span>
+                                    <span id="playerBondText">0%</span>
+                                </div>
+                                <div class="w-full h-1.5 bg-slate-950 rounded overflow-hidden border border-slate-700">
+                                    <div id="playerBondBar" class="h-full bg-gradient-to-r from-amber-500 to-yellow-300 transition-all duration-150" style="width: 0%;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== TOP-RIGHT: OPPONENT BROADCAST HUD ==================== -->
+            <div class="absolute top-2.5 right-2.5 z-30 w-64 sm:w-80 pointer-events-none">
+                <div class="anime-skew-right broadcast-glass border-r-4 border-red-500 border-t border-l border-b border-slate-700/80 p-2.5 shadow-2xl rounded-l-xl">
+                    <div class="anime-unskew-right">
+                        <div class="flex items-center justify-between text-[10px] font-bold text-slate-400 mb-0.5">
+                            <div id="enemyPartyBalls" class="flex items-center gap-1"></div>
+                            <span id="enemyTrainerLabel" class="text-red-400 uppercase tracking-wider">RIVAL GARY</span>
+                        </div>
+
+                        <div class="flex items-center justify-between gap-1 mb-1">
+                            <div class="flex items-center gap-1.5 truncate">
+                                <span id="enemyNameHud" class="font-extrabold text-sm sm:text-base uppercase tracking-wide text-white truncate">BLASTOISE</span>
+                                <span id="enemyStatusHud" class="hidden text-[9px] font-black px-1.5 py-0.5 rounded uppercase"></span>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <div id="enemyTypesHud" class="flex gap-1"></div>
+                                <span class="text-[10px] font-black px-1.5 py-0.5 rounded bg-slate-800 text-amber-400 border border-slate-700">Lv.50</span>
+                            </div>
+                        </div>
+
+                        <!-- Smooth Segmented HP Bar -->
+                        <div class="relative w-full h-3.5 bg-slate-950 rounded overflow-hidden border border-slate-700 p-0.5 shadow-inner">
+                            <div id="enemyHpBar" class="h-full bg-emerald-500 rounded-xs transition-all duration-150" style="width: 100%;"></div>
+                            <div class="absolute inset-0 bg-[linear-gradient(90deg,transparent_24%,rgba(0,0,0,0.35)_25%,transparent_26%,transparent_49%,rgba(0,0,0,0.35)_50%,transparent_51%,transparent_74%,rgba(0,0,0,0.35)_75%,transparent_76%)] pointer-events-none"></div>
+                        </div>
+
+                        <div class="flex items-center justify-between mt-0.5 text-[10px] font-bold">
+                            <span id="enemyAiStateBadge" class="text-amber-300 uppercase tracking-wider">AI: STRAFING</span>
+                            <span id="enemyHpText" class="text-slate-100 font-mono">160 / 160 HP</span>
+                        </div>
+
+                        <!-- Enemy Stamina Bar -->
+                        <div class="mt-1.5 pt-1.5 border-t border-slate-800/90">
+                            <div class="flex justify-between text-[9px] font-bold text-red-300">
+                                <span>OPPONENT STAMINA</span>
+                                <span id="enemyStaminaText">100%</span>
+                            </div>
+                            <div class="w-full h-1.5 bg-slate-950 rounded overflow-hidden border border-slate-700">
+                                <div id="enemyStaminaBar" class="h-full bg-red-400 transition-all duration-75" style="width: 100%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== ANIME TRAINER CALLOUT SLASH BANNER ==================== -->
+            <div id="animeCalloutBanner" class="hidden absolute inset-x-0 top-20 z-30 pointer-events-none">
+                <div id="animeCalloutBg" class="w-full py-2 px-6 bg-gradient-to-r from-slate-950/90 via-cyan-600/90 to-slate-950/90 border-y-2 border-yellow-400 shadow-[0_0_40px_rgba(0,0,0,0.85)] flex items-center justify-center">
+                    <div class="text-center">
+                        <p id="animeCalloutSub" class="text-[10px] font-extrabold tracking-[0.25em] uppercase text-yellow-300">
+                            ASH KETCHUM COMMANDS
+                        </p>
+                        <h2 id="animeCalloutMain" class="font-anime-impact italic text-lg sm:text-2xl text-white uppercase tracking-wider drop-shadow-[0_3px_0_#000]">
+                            "PIKACHU, DODGE AND USE THUNDERBOLT!"
+                        </h2>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== BOTTOM-LEFT: LIVE KEYBOARD WASD + JOYSTICK CLUSTER ==================== -->
+            <div class="absolute bottom-3 left-3 z-30 flex items-end gap-2.5">
+                <!-- On-Screen Touch/Mouse Joystick -->
+                <div id="virtualJoystickZone" class="relative w-24 h-24 sm:w-26 sm:h-26 rounded-full bg-slate-900/65 border-2 border-slate-700/80 backdrop-blur-xs flex items-center justify-center touch-none shadow-lg">
+                    <div class="text-[7px] font-extrabold uppercase tracking-widest text-cyan-300/80 absolute top-1.5">DRAG / MOVE</div>
+                    <div id="joystickKnob" class="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 border-2 border-white shadow-lg shadow-cyan-500/40 pointer-events-none transition-transform duration-75"></div>
+                </div>
+
+                <!-- Interactive Live Keyboard WASD Pad -->
+                <div class="hidden md:flex flex-col items-center gap-1 broadcast-glass px-2.5 py-2 rounded-xl border border-slate-700/80 shadow-xl pointer-events-none">
+                    <span class="text-[8px] font-black uppercase tracking-widest text-slate-400">KEYBOARD MOVE</span>
+                    <div class="flex flex-col items-center gap-1">
+                        <span id="keyVis_W" class="keycap">W</span>
+                        <div class="flex gap-1">
+                            <span id="keyVis_A" class="keycap">A</span>
+                            <span id="keyVis_S" class="keycap">S</span>
+                            <span id="keyVis_D" class="keycap">D</span>
+                        </div>
+                    </div>
+                    <span class="text-[8px] text-slate-400 font-bold">or Arrow Keys</span>
+                </div>
+            </div>
+
+            <!-- ==================== TACTICAL ACTION BUTTONS OVERLAY (BOTTOM-RIGHT) ==================== -->
+            <div class="absolute bottom-3 right-3 z-30 flex items-center gap-2">
+                <!-- Brace / Guard (Q) -->
+                <button id="btnGuard"
+                    onmousedown="GameEngine.setGuard(true)" onmouseup="GameEngine.setGuard(false)" onmouseleave="GameEngine.setGuard(false)"
+                    ontouchstart="GameEngine.setGuard(true); event.preventDefault();" ontouchend="GameEngine.setGuard(false)"
+                    class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl broadcast-glass hover:bg-amber-950/90 border-2 border-amber-400/80 shadow-lg flex flex-col items-center justify-center active:scale-95 transition">
+                    <i class="fa-solid fa-shield-halved text-amber-400 text-base sm:text-lg"></i>
+                    <span class="font-anime-impact text-[10px] text-white leading-tight mt-0.5">GUARD</span>
+                    <span id="keyVis_Q" class="keycap !h-4 !min-w-4 !text-[9px] mt-0.5">Q</span>
+                </button>
+
+                <!-- Counter-Shield (E) -->
+                <button id="btnCounterShield" onclick="GameEngine.triggerCounterShield()"
+                    class="w-16 h-16 sm:w-18 sm:h-18 rounded-2xl broadcast-glass hover:bg-purple-950/90 border-2 border-purple-400 shadow-lg shadow-purple-500/20 flex flex-col items-center justify-center active:scale-95 transition">
+                    <i class="fa-solid fa-hurricane text-purple-400 text-lg sm:text-xl animate-spin" style="animation-duration: 3s;"></i>
+                    <span class="font-anime-impact text-[10px] text-white leading-tight mt-0.5">COUNTER</span>
+                    <span id="keyVis_E" class="keycap !h-4 !min-w-4 !text-[9px] mt-0.5">E</span>
+                </button>
+
+                <!-- Dodge Dash (Space / Shift) -->
+                <button id="btnDodgeDash" onclick="GameEngine.triggerDodgeDash()"
+                    class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-700 hover:from-cyan-400 hover:to-blue-600 border-2 border-white shadow-xl shadow-cyan-500/30 flex flex-col items-center justify-center active:scale-90 transition">
+                    <i class="fa-solid fa-wind text-white text-xl sm:text-2xl"></i>
+                    <span class="font-anime-impact text-xs text-white leading-tight mt-0.5">DODGE!</span>
+                    <span id="keyVis_SPACE" class="keycap !h-4 !px-1.5 !text-[8px] mt-0.5">SPACE</span>
+                </button>
+            </div>
+
+            <!-- ==================== LIVE KEYBOARD CONTROLS BAR (BOTTOM CENTER) ==================== -->
+            <div class="hidden lg:flex absolute bottom-2.5 left-1/2 -translate-x-1/2 z-30 items-center gap-3 px-4 py-1.5 rounded-2xl broadcast-glass border border-slate-700/80 text-[10px] font-bold text-slate-300 shadow-2xl pointer-events-none">
+                <span class="flex items-center gap-1"><span class="keycap !h-4 !text-[9px]">WASD</span> / <span class="keycap !h-4 !text-[9px]">↑↓←→</span> Move</span>
+                <span class="text-slate-700">•</span>
+                <span class="flex items-center gap-1"><span class="keycap !h-4 !text-[9px]">SPACE</span> Dodge</span>
+                <span class="text-slate-700">•</span>
+                <span class="flex items-center gap-1"><span class="keycap !h-4 !text-[9px]">1-4</span> or <span class="keycap !h-4 !text-[9px]">J K L U</span> Moves</span>
+                <span class="text-slate-700">•</span>
+                <span class="flex items-center gap-1"><span class="keycap !h-4 !text-[9px]">Z X C</span> / <span class="keycap !h-4 !text-[9px]">TAB</span> Switch</span>
+                <span class="text-slate-700">•</span>
+                <span class="flex items-center gap-1"><span class="keycap !h-4 !text-[9px]">R</span> Overdrive</span>
+            </div>
+
+            <!-- LOADING OVERLAY -->
+            <div id="loadingOverlay" class="absolute inset-0 bg-slate-950/92 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 text-center">
+                <div class="w-12 h-12 rounded-full border-4 border-slate-700 border-t-yellow-400 animate-spin mb-3"></div>
+                <h2 class="font-anime-impact text-xl sm:text-2xl text-yellow-400 tracking-wider">SYNCING 2.5D STADIUM & POKÉAPI...</h2>
+                <p class="text-xs text-slate-400 mt-1">Loading Gen V animated sprites, spatial move physics, and 3v3 rosters</p>
+            </div>
+        </div>
+
+        <!-- ==================== BOTTOM TACTICAL DECK & LIVE ANNOUNCER ==================== -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-2">
+
+            <!-- LEFT/CENTER: 4 REAL-TIME SPATIAL MOVE CARDS + 3v3 LIVE SWITCH (8 Cols) -->
+            <div class="lg:col-span-8 bg-slate-900/95 border border-slate-800 rounded-2xl p-2.5 shadow-xl flex flex-col justify-between">
+
+                <!-- Header Bar: Active Fighter Status + Bond Overdrive Button + Party Switch -->
+                <div class="flex flex-wrap items-center justify-between gap-2 pb-2 mb-2 border-b border-slate-800">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+                        <span class="text-xs font-extrabold uppercase tracking-wider text-slate-200">
+                            REAL-TIME MOVES (<kbd class="px-1 bg-slate-800 rounded text-yellow-400">1</kbd>-<kbd class="px-1 bg-slate-800 rounded text-yellow-400">4</kbd>)
+                        </span>
+                    </div>
+
+                    <!-- Bond Sync Overdrive Button (R) -->
+                    <button id="overdriveBtn" onclick="GameEngine.activateOverdrive()" disabled
+                        class="disabled:opacity-35 disabled:cursor-not-allowed bg-gradient-to-r from-amber-500 via-yellow-400 to-orange-500 text-slate-950 font-black text-xs px-3 py-1 rounded-full shadow-lg transition transform active:scale-95 flex items-center gap-1.5">
+                        <i class="fa-solid fa-burst"></i>
+                        <span id="overdriveBtnLabel">BOND OVERDRIVE [R] (100% SYNC)</span>
+                    </button>
+
+                    <!-- 3v3 Live Bench Switcher -->
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-[10px] font-bold uppercase text-slate-400 mr-1"><i class="fa-solid fa-repeat mr-1 text-cyan-400"></i>SWITCH [<kbd class="text-cyan-300">Z/X/C</kbd> or <kbd class="text-cyan-300">TAB</kbd>]:</span>
+                        <div id="partySwitchBar" class="flex items-center gap-1.5"></div>
+                    </div>
+                </div>
+
+                <!-- 4 Spatial Move Cards Grid -->
+                <div id="movesGrid" class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <!-- Populated dynamically with spatial archetype badges (BEAM, ORB, BLITZ, AOE), cooldown overlays, and PP -->
+                </div>
+            </div>
+
+            <!-- RIGHT: LIVE ANIME NARRATOR & COMBAT TELEMETRY LOG (4 Cols) -->
+            <div class="lg:col-span-4 bg-slate-900/95 border border-slate-800 rounded-2xl p-2.5 shadow-xl flex flex-col h-[145px] lg:h-[155px]">
+                <div class="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-800">
+                    <div class="flex items-center gap-1.5">
+                        <span class="px-1.5 py-0.5 text-[9px] font-black uppercase bg-red-600 text-white rounded animate-pulse">LIVE</span>
+                        <h3 class="text-[11px] font-extrabold uppercase tracking-wider text-slate-300">
+                            STADIUM COMMENTARY & TELEMETRY
+                        </h3>
+                    </div>
+                    <span class="text-[10px] font-mono text-slate-400">60 FPS 2.5D</span>
+                </div>
+
+                <div id="announcerLog" class="flex-1 overflow-y-auto space-y-1 pr-1 text-[11px] leading-snug"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ==================== CUSTOM POKÉAPI ROSTER BUILDER MODAL ==================== -->
+    <div id="rosterModal" class="hidden fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="max-w-xl w-full bg-slate-900 border-2 border-indigo-500 rounded-2xl p-5 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h2 class="font-anime-impact text-lg sm:text-xl text-indigo-400 tracking-wide">
+                    <i class="fa-solid fa-dna mr-2"></i>LIVE POKÉAPI SQUAD CUSTOMIZER
+                </h2>
+                <button onclick="document.getElementById('rosterModal').classList.add('hidden')" class="text-slate-400 hover:text-white text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <p class="text-xs text-slate-300">
+                Enter any Pokémon name or National Dex ID (every Legendary & Mythical Pokémon automatically loads its authentic <b>★ Signature Moveset</b>, e.g. <code class="text-yellow-300">arceus</code>, <code class="text-yellow-300">dialga</code>, <code class="text-yellow-300">palkia</code>, <code class="text-yellow-300">giratina</code>, <code class="text-yellow-300">rayquaza</code>, <code class="text-yellow-300">mewtwo</code>, <code class="text-yellow-300">kyogre</code>, <code class="text-yellow-300">groudon</code>, <code class="text-yellow-300">zekrom</code>, <code class="text-yellow-300">reshiram</code>, <code class="text-yellow-300">darkrai</code>):
+            </p>
+
+            <!-- Quick-Fill Legendary Preset Buttons -->
+            <div class="flex flex-wrap items-center gap-1.5 pt-1">
+                <span class="text-[10px] font-black uppercase text-amber-400 mr-1"><i class="fa-solid fa-crown mr-1"></i>Quick Presets:</span>
+                <button type="button" onclick="GameEngine.fillModalPreset(['arceus','dialga','palkia'],['rayquaza','mewtwo','giratina'])" class="px-2 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/50 text-[10px] font-bold text-amber-300 transition">
+                    ★ Arceus Creation Trio vs. Mega Legends
+                </button>
+                <button type="button" onclick="GameEngine.fillModalPreset(['kyogre','groudon','ho-oh'],['zekrom','reshiram','lugia'])" class="px-2 py-1 rounded bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/50 text-[10px] font-bold text-cyan-300 transition">
+                    ★ Weather & Tao Dragons
+                </button>
+                <button type="button" onclick="GameEngine.fillModalPreset(['darkrai','deoxys','victini'],['genesect','keldeo','shaymin'])" class="px-2 py-1 rounded bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/50 text-[10px] font-bold text-purple-300 transition">
+                    ★ Mythical Showdown
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div class="bg-slate-800/70 p-3 rounded-xl border border-cyan-500/40 space-y-2">
+                    <h4 class="text-xs font-black uppercase text-cyan-400">YOUR 3v3 SQUAD</h4>
+                    <input id="customP1" type="text" value="pikachu" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-bold text-white" placeholder="Slot 1 Pokémon">
+                    <input id="customP2" type="text" value="charizard" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-bold text-white" placeholder="Slot 2 Pokémon">
+                    <input id="customP3" type="text" value="lucario" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-bold text-white" placeholder="Slot 3 Pokémon">
+                </div>
+
+                <div class="bg-slate-800/70 p-3 rounded-xl border border-red-500/40 space-y-2">
+                    <h4 class="text-xs font-black uppercase text-red-400">OPPONENT 3v3 SQUAD</h4>
+                    <input id="customE1" type="text" value="blastoise" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-bold text-white" placeholder="Enemy 1 Pokémon">
+                    <input id="customE2" type="text" value="electivire" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-bold text-white" placeholder="Enemy 2 Pokémon">
+                    <input id="customE3" type="text" value="garchomp" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-bold text-white" placeholder="Enemy 3 Pokémon">
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                <button onclick="document.getElementById('rosterModal').classList.add('hidden')" class="px-4 py-2 rounded-lg bg-slate-800 text-xs font-bold text-slate-300">
+                    CANCEL
+                </button>
+                <button onclick="GameEngine.loadCustomRoster()" class="px-5 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-cyan-500 hover:from-indigo-400 hover:to-cyan-400 text-slate-950 font-black text-xs shadow-lg">
+                    FETCH FROM POKÉAPI & LAUNCH!
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== CONTROLS & ANIME TACTICS GUIDE MODAL ==================== -->
+    <div id="helpModal" class="hidden fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="max-w-2xl w-full bg-slate-900 border-2 border-slate-700 rounded-2xl p-5 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h2 class="font-anime-impact text-xl text-yellow-400 tracking-wide">
+                    <i class="fa-solid fa-gamepad mr-2"></i>2.5D REAL-TIME ANIME STADIUM CONTROLS
+                </h2>
+                <button onclick="document.getElementById('helpModal').classList.add('hidden')" class="text-slate-400 hover:text-white text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-slate-300">
+                <div class="bg-slate-800/70 p-3 rounded-xl border border-slate-700">
+                    <h4 class="font-bold text-cyan-400 uppercase mb-1"><i class="fa-solid fa-keyboard mr-1"></i>1. Full Two-Handed Keyboard Controls</h4>
+                    <ul class="space-y-1">
+                        <li><b>Move (360°):</b> <kbd class="px-1 bg-slate-950 rounded text-cyan-300">W A S D</kbd> or <kbd class="px-1 bg-slate-950 rounded text-cyan-300">Arrow Keys</kbd></li>
+                        <li><b>Unleash Moves 1–4:</b> <kbd class="px-1 bg-slate-950 rounded text-yellow-300">1 2 3 4</kbd> or Arcade Keys <kbd class="px-1 bg-slate-950 rounded text-yellow-300">J K L U</kbd></li>
+                        <li><b>Dodge Dash (i-Frames):</b> <kbd class="px-1 bg-slate-950 rounded text-cyan-300">SPACE</kbd> or <kbd class="px-1 bg-slate-950 rounded text-cyan-300">SHIFT</kbd></li>
+                        <li><b>Counter-Shield / Guard:</b> <kbd class="px-1 bg-slate-950 rounded text-purple-300">E</kbd> (Counter) • Hold <kbd class="px-1 bg-slate-950 rounded text-amber-300">Q</kbd> (Guard)</li>
+                        <li><b>Switch Pokémon / Overdrive:</b> <kbd class="px-1 bg-slate-950 rounded text-emerald-300">Z X C</kbd> or <kbd class="px-1 bg-slate-950 rounded text-emerald-300">TAB</kbd> • <kbd class="px-1 bg-slate-950 rounded text-amber-300">R</kbd> (Overdrive) • <kbd class="px-1 bg-slate-950 rounded text-cyan-300">F</kbd> (Aim Mode)</li>
+                    </ul>
+                </div>
+
+                <div class="bg-slate-800/70 p-3 rounded-xl border border-slate-700">
+                    <h4 class="font-bold text-purple-400 uppercase mb-1"><i class="fa-solid fa-hurricane mr-1"></i>2. Counter-Shield [E] & Guard [Q]</h4>
+                    <p>Press <b>E</b> to spin and unleash Ash's Sinnoh <b>Counter-Shield</b>—a 360° vortex that destroys incoming enemy projectiles, repels melee blitzes, and deals chip damage! Hold <b>Q</b> (or Right-Click) to raise an armored hexagonal barrier that cuts incoming damage by 65%.</p>
+                </div>
+
+                <div class="bg-slate-800/70 p-3 rounded-xl border border-slate-700">
+                    <h4 class="font-bold text-amber-400 uppercase mb-1"><i class="fa-solid fa-meteor mr-1"></i>3. Spatial Move Archetypes [1-4]</h4>
+                    <ul class="list-disc list-inside space-y-1">
+                        <li><b>BEAM:</b> Projects a warning laser before firing a massive arena-spanning beam you can physically sidestep!</li>
+                        <li><b>ORB / BARRAGE:</b> Launches high-speed homing or spread projectiles.</li>
+                        <li><b>BLITZ:</b> Rockets across the turf wrapped in elemental aura for a melee slam!</li>
+                        <li><b>AOE WAVE:</b> Detonates an expanding 360° stadium shockwave.</li>
+                    </ul>
+                </div>
+
+                <div class="bg-slate-800/70 p-3 rounded-xl border border-slate-700">
+                    <h4 class="font-bold text-emerald-400 uppercase mb-1"><i class="fa-solid fa-water mr-1"></i>4. Interactive Stadium Hazards</h4>
+                    <ul class="list-disc list-inside space-y-1">
+                        <li><b>Water Puddles + Electric:</b> Hitting a soaked puddle with an Electric move electrifies the water into a 1.35x high-voltage zone!</li>
+                        <li><b>Scorched Magma:</b> Fire attacks leave burning turf patches.</li>
+                        <li><b>2.5D Rock Pillars:</b> Heavy physical/ground hits raise rock pillars you can hide behind to block enemy beams!</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="flex justify-end pt-2 border-t border-slate-800">
+                <button onclick="document.getElementById('helpModal').classList.add('hidden')" class="bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-black text-xs px-5 py-2 rounded-lg">
+                    RESUME STADIUM BATTLE!
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MATCH RESULT MODAL ==================== -->
+    <div id="resultModal" class="hidden fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="max-w-md w-full bg-slate-900 border-2 border-yellow-400 rounded-2xl p-6 text-center shadow-[0_0_60px_rgba(250,204,21,0.3)]">
+            <div id="resultTrophyIcon" class="text-5xl text-yellow-400 mb-3">
+                <i class="fa-solid fa-trophy"></i>
+            </div>
+            <h2 id="resultTitle" class="font-anime-impact text-3xl text-white tracking-wider mb-1">VICTORY!</h2>
+            <p id="resultSubtitle" class="text-sm text-slate-300 mb-5">Ash Ketchum triumphs in an unforgettable stadium showdown!</p>
+            <button onclick="GameEngine.initMatch(document.getElementById('rivalrySelect').value)" class="w-full bg-gradient-to-r from-yellow-400 via-amber-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 text-slate-950 font-black py-3 rounded-xl shadow-lg transition">
+                PLAY REMATCH
+            </button>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * ============================================================================
+         * 1. WEB AUDIO SYNTHESIZER & POKÉAPI CRY AUDIO ENGINE
+         * ============================================================================
+         */
+        const SoundEngine = {
+            enabled: true,
+            ctx: null,
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) this.ctx = new AudioCtx();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            },
+
+            playCry(url) {
+                if (!this.enabled || !url) return;
+                try {
+                    const audio = new Audio(url);
+                    audio.volume = 0.32;
+                    audio.play().catch(() => {});
+                } catch (e) {}
+            },
+
+            playSfx(type) {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                if (type === 'dash') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(320, now);
+                    osc.frequency.exponentialRampToValueAtTime(980, now + 0.14);
+                    gain.gain.setValueAtTime(0.16, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                    osc.start(now);
+                    osc.stop(now + 0.15);
+                } else if (type === 'perfect_dodge') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(520, now);
+                    osc.frequency.setValueAtTime(1040, now + 0.06);
+                    osc.frequency.setValueAtTime(1560, now + 0.12);
+                    gain.gain.setValueAtTime(0.24, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+                    osc.start(now);
+                    osc.stop(now + 0.32);
+                } else if (type === 'counter_shield') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(280, now);
+                    osc.frequency.exponentialRampToValueAtTime(760, now + 0.25);
+                    gain.gain.setValueAtTime(0.18, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+                    osc.start(now);
+                    osc.stop(now + 0.28);
+                } else if (type === 'beam_charge') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(220, now);
+                    osc.frequency.exponentialRampToValueAtTime(880, now + 0.35);
+                    gain.gain.setValueAtTime(0.12, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.36);
+                    osc.start(now);
+                    osc.stop(now + 0.36);
+                } else if (type === 'beam_fire') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(190, now);
+                    osc.frequency.exponentialRampToValueAtTime(55, now + 0.32);
+                    gain.gain.setValueAtTime(0.26, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.34);
+                    osc.start(now);
+                    osc.stop(now + 0.34);
+                } else if (type === 'hit_normal') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(150, now);
+                    osc.frequency.exponentialRampToValueAtTime(42, now + 0.16);
+                    gain.gain.setValueAtTime(0.22, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.17);
+                    osc.start(now);
+                    osc.stop(now + 0.17);
+                } else if (type === 'hit_super') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(340, now);
+                    osc.frequency.exponentialRampToValueAtTime(36, now + 0.34);
+                    gain.gain.setValueAtTime(0.32, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+                    osc.start(now);
+                    osc.stop(now + 0.35);
+                } else if (type === 'rock_break') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(95, now);
+                    osc.frequency.exponentialRampToValueAtTime(28, now + 0.25);
+                    gain.gain.setValueAtTime(0.28, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
+                    osc.start(now);
+                    osc.stop(now + 0.26);
+                }
+            }
+        };
+
+        /**
+         * ============================================================================
+         * 2. 18-TYPE EFFECTIVENESS CHART & ELEMENTAL VISUAL PALETTE
+         * ============================================================================
+         */
+        const TYPE_CHART = {
+            normal:   { rock: 0.5, ghost: 0, steel: 0.5 },
+            fire:     { fire: 0.5, water: 0.5, grass: 2, ice: 2, bug: 2, rock: 0.5, dragon: 0.5, steel: 2 },
+            water:    { fire: 2, water: 0.5, grass: 0.5, ground: 2, rock: 2, dragon: 0.5 },
+            electric: { water: 2, electric: 0.5, grass: 0.5, ground: 0, flying: 2, dragon: 0.5 },
+            grass:    { fire: 0.5, water: 2, grass: 0.5, poison: 0.5, ground: 2, flying: 0.5, bug: 0.5, rock: 2, dragon: 0.5, steel: 0.5 },
+            ice:      { fire: 0.5, water: 0.5, grass: 2, ice: 0.5, ground: 2, flying: 2, dragon: 2, steel: 0.5 },
+            fighting: { normal: 2, ice: 2, poison: 0.5, flying: 0.5, psychic: 0.5, bug: 0.5, rock: 2, ghost: 0, dark: 2, steel: 2, fairy: 0.5 },
+            poison:   { grass: 2, poison: 0.5, ground: 0.5, rock: 0.5, ghost: 0.5, steel: 0, fairy: 2 },
+            ground:   { fire: 2, electric: 2, grass: 0.5, poison: 2, flying: 0, bug: 0.5, rock: 2, steel: 2 },
+            flying:   { electric: 0.5, grass: 2, fighting: 2, bug: 2, rock: 0.5, steel: 0.5 },
+            psychic:  { fighting: 2, poison: 2, psychic: 0.5, dark: 0, steel: 0.5 },
+            bug:      { fire: 0.5, grass: 2, fighting: 0.5, poison: 0.5, flying: 0.5, psychic: 2, ghost: 0.5, dark: 2, steel: 0.5, fairy: 0.5 },
+            rock:     { fire: 2, ice: 2, fighting: 0.5, ground: 0.5, flying: 2, bug: 2, steel: 0.5 },
+            ghost:    { normal: 0, psychic: 2, ghost: 2, dark: 0.5 },
+            dragon:   { dragon: 2, steel: 0.5, fairy: 0 },
+            dark:     { fighting: 0.5, psychic: 2, ghost: 2, dark: 0.5, fairy: 0.5 },
+            steel:    { fire: 0.5, water: 0.5, electric: 0.5, ice: 2, rock: 2, steel: 0.5, fairy: 2 },
+            fairy:    { fire: 0.5, fighting: 2, poison: 0.5, dragon: 2, dark: 2, steel: 0.5 }
+        };
+
+        const TYPE_COLORS = {
+            normal:   { bg: 'bg-stone-500', border: 'border-stone-400', hex: '#e7e5e4', glow: '#a8a29e', sfx: 'ドーン! BAM!' },
+            fire:     { bg: 'bg-orange-600', border: 'border-orange-400', hex: '#fb923c', glow: '#ef4444', sfx: 'ゴォォ! BLAZE!' },
+            water:    { bg: 'bg-sky-600', border: 'border-sky-400', hex: '#38bdf8', glow: '#0284c7', sfx: 'ザッパーン! SPLASH!' },
+            electric: { bg: 'bg-amber-400 text-slate-950', border: 'border-yellow-300', hex: '#facc15', glow: '#eab308', sfx: 'バチバチ! ZAP!' },
+            grass:    { bg: 'bg-emerald-600', border: 'border-emerald-400', hex: '#34d399', glow: '#059669', sfx: 'ザシュッ! LEAF!' },
+            ice:      { bg: 'bg-cyan-400 text-slate-950', border: 'border-cyan-300', hex: '#67e8f9', glow: '#06b6d4', sfx: 'パキーン! FREEZE!' },
+            fighting: { bg: 'bg-red-700', border: 'border-red-500', hex: '#f87171', glow: '#dc2626', sfx: 'ドガァッ! SMASH!' },
+            poison:   { bg: 'bg-purple-600', border: 'border-purple-400', hex: '#c084fc', glow: '#9333ea', sfx: 'ドロドロ! VENOM!' },
+            ground:   { bg: 'bg-yellow-700', border: 'border-yellow-500', hex: '#fbbf24', glow: '#b45309', sfx: 'ゴゴゴ! QUAKE!' },
+            flying:   { bg: 'bg-indigo-500', border: 'border-indigo-300', hex: '#818cf8', glow: '#4f46e5', sfx: 'ビュォォ! GALE!' },
+            psychic:  { bg: 'bg-pink-600', border: 'border-pink-400', hex: '#f472b6', glow: '#db2777', sfx: 'キィィン! PSY!' },
+            bug:      { bg: 'bg-lime-600', border: 'border-lime-400', hex: '#a3e635', glow: '#65a30d', sfx: 'ブーン! SWARM!' },
+            rock:     { bg: 'bg-stone-600', border: 'border-stone-400', hex: '#d6d3d1', glow: '#78716c', sfx: 'ズガァン! CRASH!' },
+            ghost:    { bg: 'bg-violet-800', border: 'border-violet-500', hex: '#a78bfa', glow: '#6d28d9', sfx: 'ゾクゾク! PHANTOM!' },
+            dragon:   { bg: 'bg-indigo-700', border: 'border-indigo-400', hex: '#60a5fa', glow: '#4338ca', sfx: 'ギャオォ! ROAR!' },
+            dark:     { bg: 'bg-neutral-800', border: 'border-neutral-500', hex: '#a3a3a3', glow: '#171717', sfx: 'ズバッ! SLASH!' },
+            steel:    { bg: 'bg-slate-500', border: 'border-slate-300', hex: '#cbd5e1', glow: '#64748b', sfx: 'ガキィン! CLANG!' },
+            fairy:    { bg: 'bg-rose-400 text-slate-950', border: 'border-rose-300', hex: '#fda4af', glow: '#e11d48', sfx: 'キラキラ! SHINE!' }
+        };
+
+        /**
+         * ============================================================================
+         * 3. RIVALRY 3v3 PRESET ROSTERS & SPATIAL ARCHETYPE CLASSIFIER
+         * ============================================================================
+         */
+        const RIVALRIES = {
+            ash_gary: {
+                playerTrainer: "ASH KETCHUM",
+                enemyTrainer: "RIVAL GARY OAK",
+                playerTeam: [
+                    { id: 25,  name: 'pikachu',   moves: ['thunderbolt', 'electro-ball', 'volt-tackle', 'iron-tail'] },
+                    { id: 6,   name: 'charizard', moves: ['flamethrower', 'dragon-claw', 'air-slash', 'overheat'] },
+                    { id: 658, name: 'greninja',  moves: ['water-shuriken', 'hydro-pump', 'aerial-ace', 'night-slash'] }
+                ],
+                enemyTeam: [
+                    { id: 9,   name: 'blastoise',  moves: ['hydro-pump', 'ice-beam', 'flash-cannon', 'skull-bash'] },
+                    { id: 466, name: 'electivire', moves: ['thunderbolt', 'thunder-punch', 'ice-punch', 'earthquake'] },
+                    { id: 212, name: 'scizor',     moves: ['bullet-punch', 'x-scissor', 'flash-cannon', 'air-slash'] }
+                ]
+            },
+            ash_alain: {
+                playerTrainer: "ASH (KALOS FINALS)",
+                enemyTrainer: "ALAIN",
+                playerTeam: [
+                    { id: 658, name: 'greninja',  moves: ['water-shuriken', 'hydro-pump', 'aerial-ace', 'night-slash'] },
+                    { id: 25,  name: 'pikachu',   moves: ['thunderbolt', 'quick-attack', 'iron-tail', 'electro-ball'] },
+                    { id: 706, name: 'goodra',    moves: ['dragon-pulse', 'muddy-water', 'ice-beam', 'sludge-bomb'] }
+                ],
+                enemyTeam: [
+                    { id: 6,   name: 'charizard', moves: ['blast-burn', 'dragon-claw', 'flamethrower', 'thunder-punch'] },
+                    { id: 376, name: 'metagross', moves: ['meteor-mash', 'psychic', 'flash-cannon', 'earthquake'] },
+                    { id: 248, name: 'tyranitar', moves: ['stone-edge', 'dark-pulse', 'crunch', 'earthquake'] }
+                ]
+            },
+            red_cynthia: {
+                playerTrainer: "CHAMPION RED",
+                enemyTrainer: "CHAMPION CYNTHIA",
+                playerTeam: [
+                    { id: 6,   name: 'charizard', moves: ['flare-blitz', 'flamethrower', 'air-slash', 'dragon-pulse'] },
+                    { id: 448, name: 'lucario',   moves: ['aura-sphere', 'close-combat', 'extreme-speed', 'flash-cannon'] },
+                    { id: 131, name: 'lapras',    moves: ['ice-beam', 'surf', 'thunderbolt', 'psychic'] }
+                ],
+                enemyTeam: [
+                    { id: 445, name: 'garchomp',  moves: ['dragon-rush', 'earthquake', 'flamethrower', 'stone-edge'] },
+                    { id: 350, name: 'milotic',   moves: ['hydro-pump', 'ice-beam', 'surf', 'dragon-pulse'] },
+                    { id: 468, name: 'togekiss',  moves: ['air-slash', 'aura-sphere', 'dazzling-gleam', 'flamethrower'] }
+                ]
+            },
+            arceus_legends: {
+                playerTrainer: "MYTHIC GUARDIAN",
+                enemyTrainer: "OMEGA CHALLENGER",
+                playerTeam: [
+                    { id: 493, name: 'arceus',   moves: ['judgment', 'extreme-speed', 'shadow-force', 'earth-power'] },
+                    { id: 483, name: 'dialga',   moves: ['roar-of-time', 'flash-cannon', 'aura-sphere', 'earth-power'] },
+                    { id: 484, name: 'palkia',   moves: ['spacial-rend', 'hydro-pump', 'aura-sphere', 'thunderbolt'] }
+                ],
+                enemyTeam: [
+                    { id: 384, name: 'rayquaza', moves: ['dragon-ascent', 'v-create', 'extreme-speed', 'draco-meteor'] },
+                    { id: 150, name: 'mewtwo',   moves: ['psystrike', 'aura-sphere', 'shadow-ball', 'ice-beam'] },
+                    { id: 487, name: 'giratina-altered', moves: ['shadow-force', 'dragon-pulse', 'aura-sphere', 'earth-power'] }
+                ]
+            },
+            mythic_titans: {
+                playerTrainer: "ANCIENT MASTER",
+                enemyTrainer: "UNOVA & JOHTO LEGENDS",
+                playerTeam: [
+                    { id: 382, name: 'kyogre',   moves: ['origin-pulse', 'water-spout', 'ice-beam', 'thunder'] },
+                    { id: 383, name: 'groudon',  moves: ['precipice-blades', 'eruption', 'stone-edge', 'solar-beam'] },
+                    { id: 250, name: 'ho-oh',    moves: ['sacred-fire', 'brave-bird', 'earthquake', 'flare-blitz'] }
+                ],
+                enemyTeam: [
+                    { id: 644, name: 'zekrom',   moves: ['bolt-strike', 'fusion-bolt', 'dragon-claw', 'stone-edge'] },
+                    { id: 643, name: 'reshiram', moves: ['blue-flare', 'fusion-flare', 'draco-meteor', 'earth-power'] },
+                    { id: 249, name: 'lugia',    moves: ['aeroblast', 'psychic', 'hydro-pump', 'ice-beam'] }
+                ]
+            }
+        };
+
+        const SIGNATURE_MOVESETS = {
+            // Mythical & Box Legendaries (Gen 1 - 9)
+            '493': ['judgment', 'extreme-speed', 'shadow-force', 'earth-power'],
+            'arceus': ['judgment', 'extreme-speed', 'shadow-force', 'earth-power'],
+            '483': ['roar-of-time', 'flash-cannon', 'aura-sphere', 'earth-power'],
+            'dialga': ['roar-of-time', 'flash-cannon', 'aura-sphere', 'earth-power'],
+            '484': ['spacial-rend', 'hydro-pump', 'aura-sphere', 'thunderbolt'],
+            'palkia': ['spacial-rend', 'hydro-pump', 'aura-sphere', 'thunderbolt'],
+            '487': ['shadow-force', 'dragon-pulse', 'aura-sphere', 'earth-power'],
+            'giratina': ['shadow-force', 'dragon-pulse', 'aura-sphere', 'earth-power'],
+            'giratina-altered': ['shadow-force', 'dragon-pulse', 'aura-sphere', 'earth-power'],
+            'giratina-origin': ['shadow-force', 'dragon-pulse', 'aura-sphere', 'earth-power'],
+            '384': ['dragon-ascent', 'v-create', 'extreme-speed', 'draco-meteor'],
+            'rayquaza': ['dragon-ascent', 'v-create', 'extreme-speed', 'draco-meteor'],
+            '150': ['psystrike', 'aura-sphere', 'shadow-ball', 'ice-beam'],
+            'mewtwo': ['psystrike', 'aura-sphere', 'shadow-ball', 'ice-beam'],
+            '151': ['psystrike', 'aura-sphere', 'flamethrower', 'thunderbolt'],
+            'mew': ['psystrike', 'aura-sphere', 'flamethrower', 'thunderbolt'],
+            '249': ['aeroblast', 'psychic', 'hydro-pump', 'ice-beam'],
+            'lugia': ['aeroblast', 'psychic', 'hydro-pump', 'ice-beam'],
+            '250': ['sacred-fire', 'brave-bird', 'earthquake', 'flare-blitz'],
+            'ho-oh': ['sacred-fire', 'brave-bird', 'earthquake', 'flare-blitz'],
+            '382': ['origin-pulse', 'water-spout', 'ice-beam', 'thunder'],
+            'kyogre': ['origin-pulse', 'water-spout', 'ice-beam', 'thunder'],
+            '383': ['precipice-blades', 'eruption', 'stone-edge', 'solar-beam'],
+            'groudon': ['precipice-blades', 'eruption', 'stone-edge', 'solar-beam'],
+            '386': ['psycho-boost', 'extreme-speed', 'ice-beam', 'thunderbolt'],
+            'deoxys': ['psycho-boost', 'extreme-speed', 'ice-beam', 'thunderbolt'],
+            'deoxys-normal': ['psycho-boost', 'extreme-speed', 'ice-beam', 'thunderbolt'],
+            '385': ['doom-desire', 'psychic', 'flash-cannon', 'thunderbolt'],
+            'jirachi': ['doom-desire', 'psychic', 'flash-cannon', 'thunderbolt'],
+            '381': ['luster-purge', 'draco-meteor', 'psychic', 'thunderbolt'],
+            'latios': ['luster-purge', 'draco-meteor', 'psychic', 'thunderbolt'],
+            '380': ['mist-ball', 'dragon-pulse', 'psychic', 'surf'],
+            'latias': ['mist-ball', 'dragon-pulse', 'psychic', 'surf'],
+            '491': ['dark-void', 'dark-pulse', 'sludge-bomb', 'ice-beam'],
+            'darkrai': ['dark-void', 'dark-pulse', 'sludge-bomb', 'ice-beam'],
+            '485': ['magma-storm', 'flash-cannon', 'earth-power', 'stone-edge'],
+            'heatran': ['magma-storm', 'flash-cannon', 'earth-power', 'stone-edge'],
+            '486': ['crush-grip', 'earthquake', 'ice-punch', 'stone-edge'],
+            'regigigas': ['crush-grip', 'earthquake', 'ice-punch', 'stone-edge'],
+            '492': ['seed-flare', 'air-slash', 'earth-power', 'dazzling-gleam'],
+            'shaymin': ['seed-flare', 'air-slash', 'earth-power', 'dazzling-gleam'],
+            'shaymin-land': ['seed-flare', 'air-slash', 'earth-power', 'dazzling-gleam'],
+            '494': ['v-create', 'searing-shot', 'psychic', 'thunderbolt'],
+            'victini': ['v-create', 'searing-shot', 'psychic', 'thunderbolt'],
+            '643': ['blue-flare', 'fusion-flare', 'draco-meteor', 'earth-power'],
+            'reshiram': ['blue-flare', 'fusion-flare', 'draco-meteor', 'earth-power'],
+            '644': ['bolt-strike', 'fusion-bolt', 'dragon-claw', 'stone-edge'],
+            'zekrom': ['bolt-strike', 'fusion-bolt', 'dragon-claw', 'stone-edge'],
+            '646': ['glaciate', 'ice-beam', 'draco-meteor', 'earth-power'],
+            'kyurem': ['glaciate', 'ice-beam', 'draco-meteor', 'earth-power'],
+            '647': ['secret-sword', 'hydro-pump', 'air-slash', 'close-combat'],
+            'keldeo': ['secret-sword', 'hydro-pump', 'air-slash', 'close-combat'],
+            'keldeo-ordinary': ['secret-sword', 'hydro-pump', 'air-slash', 'close-combat'],
+            '648': ['relic-song', 'psychic', 'close-combat', 'dazzling-gleam'],
+            'meloetta': ['relic-song', 'psychic', 'close-combat', 'dazzling-gleam'],
+            'meloetta-aria': ['relic-song', 'psychic', 'close-combat', 'dazzling-gleam'],
+            '649': ['techno-blast', 'flash-cannon', 'flamethrower', 'extreme-speed'],
+            'genesect': ['techno-blast', 'flash-cannon', 'flamethrower', 'extreme-speed'],
+            '716': ['moonblast', 'dazzling-gleam', 'thunderbolt', 'psychic'],
+            'xerneas': ['moonblast', 'dazzling-gleam', 'thunderbolt', 'psychic'],
+            '717': ['oblivion-wing', 'dark-pulse', 'air-slash', 'dragon-pulse'],
+            'yveltal': ['oblivion-wing', 'dark-pulse', 'air-slash', 'dragon-pulse'],
+            '718': ['thousand-arrows', 'core-enforcer', 'extreme-speed', 'earthquake'],
+            'zygarde': ['thousand-arrows', 'core-enforcer', 'extreme-speed', 'earthquake'],
+            'zygarde-50': ['thousand-arrows', 'core-enforcer', 'extreme-speed', 'earthquake'],
+            '791': ['sunsteel-strike', 'flare-blitz', 'earthquake', 'flash-cannon'],
+            'solgaleo': ['sunsteel-strike', 'flare-blitz', 'earthquake', 'flash-cannon'],
+            '792': ['moongeist-beam', 'psychic', 'moonblast', 'ice-beam'],
+            'lunala': ['moongeist-beam', 'psychic', 'moonblast', 'ice-beam'],
+            '800': ['photon-geyser', 'prismatic-laser', 'earth-power', 'dark-pulse'],
+            'necrozma': ['photon-geyser', 'prismatic-laser', 'earth-power', 'dark-pulse'],
+            '888': ['behemoth-blade', 'close-combat', 'wild-charge', 'crunch'],
+            'zacian': ['behemoth-blade', 'close-combat', 'wild-charge', 'crunch'],
+            '890': ['dynamax-cannon', 'sludge-bomb', 'flamethrower', 'draco-meteor'],
+            'eternatus': ['dynamax-cannon', 'sludge-bomb', 'flamethrower', 'draco-meteor'],
+            '1007': ['collision-course', 'flare-blitz', 'dragon-claw', 'close-combat'],
+            'koraidon': ['collision-course', 'flare-blitz', 'dragon-claw', 'close-combat'],
+            '1008': ['electro-drift', 'draco-meteor', 'overheat', 'dazzling-gleam'],
+            'miraidon': ['electro-drift', 'draco-meteor', 'overheat', 'dazzling-gleam'],
+            '144': ['ice-beam', 'hurricane', 'water-pulse', 'aerial-ace'],
+            'articuno': ['ice-beam', 'hurricane', 'water-pulse', 'aerial-ace'],
+            '145': ['thunderbolt', 'thunder', 'air-slash', 'heat-wave'],
+            'zapdos': ['thunderbolt', 'thunder', 'air-slash', 'heat-wave'],
+            '146': ['sacred-fire', 'flamethrower', 'air-slash', 'solar-beam'],
+            'moltres': ['sacred-fire', 'flamethrower', 'air-slash', 'solar-beam'],
+            '243': ['thunderbolt', 'aura-sphere', 'extreme-speed', 'shadow-ball'],
+            'raikou': ['thunderbolt', 'aura-sphere', 'extreme-speed', 'shadow-ball'],
+            '244': ['sacred-fire', 'flare-blitz', 'extreme-speed', 'stone-edge'],
+            'entei': ['sacred-fire', 'flare-blitz', 'extreme-speed', 'stone-edge'],
+            '245': ['hydro-pump', 'ice-beam', 'air-slash', 'surf'],
+            'suicune': ['hydro-pump', 'ice-beam', 'air-slash', 'surf'],
+            // Iconic Starters & Anime Aces
+            '25': ['thunderbolt', 'electro-ball', 'volt-tackle', 'iron-tail'],
+            'pikachu': ['thunderbolt', 'electro-ball', 'volt-tackle', 'iron-tail'],
+            '6': ['blast-burn', 'flamethrower', 'dragon-claw', 'air-slash'],
+            'charizard': ['blast-burn', 'flamethrower', 'dragon-claw', 'air-slash'],
+            '9': ['hydro-cannon', 'hydro-pump', 'ice-beam', 'flash-cannon'],
+            'blastoise': ['hydro-cannon', 'hydro-pump', 'ice-beam', 'flash-cannon'],
+            '3': ['frenzy-plant', 'sludge-bomb', 'earth-power', 'solar-beam'],
+            'venusaur': ['frenzy-plant', 'sludge-bomb', 'earth-power', 'solar-beam'],
+            '658': ['water-shuriken', 'hydro-pump', 'aerial-ace', 'night-slash'],
+            'greninja': ['water-shuriken', 'hydro-pump', 'aerial-ace', 'night-slash'],
+            '448': ['aura-sphere', 'close-combat', 'extreme-speed', 'flash-cannon'],
+            'lucario': ['aura-sphere', 'close-combat', 'extreme-speed', 'flash-cannon'],
+            '445': ['dragon-rush', 'earthquake', 'stone-edge', 'flamethrower'],
+            'garchomp': ['dragon-rush', 'earthquake', 'stone-edge', 'flamethrower'],
+            '392': ['flare-blitz', 'close-combat', 'mach-punch', 'flamethrower'],
+            'infernape': ['flare-blitz', 'close-combat', 'mach-punch', 'flamethrower'],
+            '254': ['leaf-blade', 'frenzy-plant', 'dragon-pulse', 'aerial-ace'],
+            'sceptile': ['leaf-blade', 'frenzy-plant', 'dragon-pulse', 'aerial-ace'],
+            '257': ['blaze-kick', 'flare-blitz', 'close-combat', 'brave-bird'],
+            'blaziken': ['blaze-kick', 'flare-blitz', 'close-combat', 'brave-bird'],
+            '94': ['shadow-ball', 'sludge-bomb', 'dark-pulse', 'thunderbolt'],
+            'gengar': ['shadow-ball', 'sludge-bomb', 'dark-pulse', 'thunderbolt']
+        };
+
+        // Classify any PokéAPI move into one of 4 spatial real-time action archetypes:
+        // 'BEAM' (telegraphed piercing line laser), 'PROJECTILE' (homing/spread orbs), 'BLITZ' (melee dash slam), 'AOE' (radial shockwave)
+        function classifyMoveSpatialArchetype(slug, damageClass, type, power) {
+            const s = slug.toLowerCase();
+            const beamKeywords = [
+                'beam', 'thunderbolt', 'flamethrower', 'hydro-pump', 'flash-cannon', 'dragon-pulse', 'dark-pulse',
+                'jet', 'laser', 'thunder', 'roar-of-time', 'spacial-rend', 'aeroblast', 'psystrike', 'psycho-boost',
+                'luster-purge', 'core-enforcer', 'moongeist-beam', 'photon-geyser', 'dynamax-cannon', 'techno-blast',
+                'oblivion-wing', 'solar-beam', 'hydro-cannon'
+            ];
+            const aoeKeywords = [
+                'earthquake', 'surf', 'overheat', 'blast-burn', 'discharge', 'muddy-water', 'dazzling-gleam',
+                'psychic', 'sludge-wave', 'blizzard', 'hurricane', 'judgment', 'origin-pulse', 'water-spout',
+                'precipice-blades', 'eruption', 'dark-void', 'magma-storm', 'seed-flare', 'glaciate', 'relic-song',
+                'earth-power', 'draco-meteor', 'doom-desire', 'searing-shot', 'frenzy-plant'
+            ];
+            const projectileKeywords = [
+                'ball', 'shuriken', 'slash', 'sphere', 'bomb', 'edge', 'gleam', 'fang', 'rock', 'icy-wind',
+                'water-pulse', 'sacred-fire', 'blue-flare', 'fusion-flare', 'secret-sword', 'thousand-arrows',
+                'mist-ball', 'moonblast'
+            ];
+
+            if (beamKeywords.some(k => s.includes(k))) return 'BEAM';
+            if (aoeKeywords.some(k => s.includes(k))) return 'AOE';
+            if (projectileKeywords.some(k => s.includes(k))) return 'PROJECTILE';
+            if (damageClass === 'physical') return 'BLITZ';
+            return power >= 90 ? 'BEAM' : 'PROJECTILE';
+        }
+
+        const FALLBACK_MOVES = {
+            // ==================== LEGENDARY & MYTHICAL SIGNATURE MOVES ====================
+            'judgment':         { name: 'Judgment', type: 'normal', power: 130, accuracy: 100, pp: 10, damageClass: 'special', isSignature: true, multiShot: 3 },
+            'roar-of-time':     { name: 'Roar of Time', type: 'dragon', power: 150, accuracy: 90, pp: 5, damageClass: 'special', isSignature: true },
+            'spacial-rend':     { name: 'Spacial Rend', type: 'dragon', power: 115, accuracy: 95, pp: 5, damageClass: 'special', isSignature: true },
+            'shadow-force':     { name: 'Shadow Force', type: 'ghost', power: 125, accuracy: 100, pp: 5, damageClass: 'physical', isSignature: true },
+            'dragon-ascent':    { name: 'Dragon Ascent', type: 'flying', power: 125, accuracy: 100, pp: 5, damageClass: 'physical', isSignature: true },
+            'v-create':         { name: 'V-create', type: 'fire', power: 150, accuracy: 95, pp: 5, damageClass: 'physical', ailment: 'BRN', ailmentChance: 30, isSignature: true },
+            'psystrike':        { name: 'Psystrike', type: 'psychic', power: 115, accuracy: 100, pp: 10, damageClass: 'special', isSignature: true },
+            'aeroblast':        { name: 'Aeroblast', type: 'flying', power: 110, accuracy: 95, pp: 5, damageClass: 'special', isSignature: true },
+            'sacred-fire':      { name: 'Sacred Fire', type: 'fire', power: 110, accuracy: 95, pp: 5, damageClass: 'physical', ailment: 'BRN', ailmentChance: 50, multiShot: 3, isSignature: true },
+            'origin-pulse':     { name: 'Origin Pulse', type: 'water', power: 120, accuracy: 85, pp: 10, damageClass: 'special', multiShot: 3, isSignature: true },
+            'water-spout':      { name: 'Water Spout', type: 'water', power: 135, accuracy: 100, pp: 5, damageClass: 'special', isSignature: true },
+            'precipice-blades': { name: 'Precipice Blades', type: 'ground', power: 125, accuracy: 85, pp: 10, damageClass: 'physical', isSignature: true },
+            'eruption':         { name: 'Eruption', type: 'fire', power: 135, accuracy: 100, pp: 5, damageClass: 'special', ailment: 'BRN', ailmentChance: 30, isSignature: true },
+            'psycho-boost':     { name: 'Psycho Boost', type: 'psychic', power: 140, accuracy: 90, pp: 5, damageClass: 'special', isSignature: true },
+            'doom-desire':      { name: 'Doom Desire', type: 'steel', power: 140, accuracy: 100, pp: 5, damageClass: 'special', isSignature: true },
+            'luster-purge':     { name: 'Luster Purge', type: 'psychic', power: 95, accuracy: 100, pp: 5, damageClass: 'special', isSignature: true },
+            'mist-ball':        { name: 'Mist Ball', type: 'psychic', power: 95, accuracy: 100, pp: 5, damageClass: 'special', isSignature: true },
+            'dark-void':        { name: 'Dark Void', type: 'dark', power: 95, accuracy: 90, pp: 10, damageClass: 'special', ailment: 'PAR', ailmentChance: 60, isSignature: true },
+            'magma-storm':      { name: 'Magma Storm', type: 'fire', power: 115, accuracy: 85, pp: 5, damageClass: 'special', ailment: 'BRN', ailmentChance: 40, isSignature: true },
+            'crush-grip':       { name: 'Crush Grip', type: 'normal', power: 120, accuracy: 100, pp: 5, damageClass: 'physical', isSignature: true },
+            'seed-flare':       { name: 'Seed Flare', type: 'grass', power: 120, accuracy: 85, pp: 5, damageClass: 'special', isSignature: true },
+            'searing-shot':     { name: 'Searing Shot', type: 'fire', power: 105, accuracy: 100, pp: 5, damageClass: 'special', ailment: 'BRN', ailmentChance: 35, isSignature: true },
+            'blue-flare':       { name: 'Blue Flare', type: 'fire', power: 130, accuracy: 85, pp: 5, damageClass: 'special', ailment: 'BRN', ailmentChance: 30, isSignature: true },
+            'fusion-flare':     { name: 'Fusion Flare', type: 'fire', power: 105, accuracy: 100, pp: 5, damageClass: 'special', isSignature: true },
+            'bolt-strike':      { name: 'Bolt Strike', type: 'electric', power: 130, accuracy: 85, pp: 5, damageClass: 'physical', ailment: 'PAR', ailmentChance: 30, isSignature: true },
+            'fusion-bolt':      { name: 'Fusion Bolt', type: 'electric', power: 105, accuracy: 100, pp: 5, damageClass: 'physical', isSignature: true },
+            'glaciate':         { name: 'Glaciate', type: 'ice', power: 95, accuracy: 95, pp: 10, damageClass: 'special', ailment: 'FRZ', ailmentChance: 30, isSignature: true },
+            'secret-sword':     { name: 'Secret Sword', type: 'fighting', power: 95, accuracy: 100, pp: 10, damageClass: 'special', isSignature: true },
+            'relic-song':       { name: 'Relic Song', type: 'normal', power: 95, accuracy: 100, pp: 10, damageClass: 'special', isSignature: true },
+            'techno-blast':     { name: 'Techno Blast', type: 'steel', power: 120, accuracy: 100, pp: 5, damageClass: 'special', isSignature: true },
+            'oblivion-wing':    { name: 'Oblivion Wing', type: 'flying', power: 100, accuracy: 100, pp: 10, damageClass: 'special', isSignature: true },
+            'thousand-arrows':  { name: 'Thousand Arrows', type: 'ground', power: 100, accuracy: 100, pp: 10, damageClass: 'physical', multiShot: 3, isSignature: true },
+            'core-enforcer':    { name: 'Core Enforcer', type: 'dragon', power: 110, accuracy: 100, pp: 10, damageClass: 'special', isSignature: true },
+            'sunsteel-strike':  { name: 'Sunsteel Strike', type: 'steel', power: 115, accuracy: 100, pp: 5, damageClass: 'physical', isSignature: true },
+            'moongeist-beam':   { name: 'Moongeist Beam', type: 'ghost', power: 115, accuracy: 100, pp: 5, damageClass: 'special', isSignature: true },
+            'photon-geyser':    { name: 'Photon Geyser', type: 'psychic', power: 115, accuracy: 100, pp: 5, damageClass: 'special', isSignature: true },
+            'prismatic-laser':  { name: 'Prismatic Laser', type: 'psychic', power: 145, accuracy: 100, pp: 5, damageClass: 'special', isSignature: true },
+            'behemoth-blade':   { name: 'Behemoth Blade', type: 'steel', power: 120, accuracy: 100, pp: 5, damageClass: 'physical', isSignature: true },
+            'dynamax-cannon':   { name: 'Dynamax Cannon', type: 'dragon', power: 120, accuracy: 100, pp: 5, damageClass: 'special', isSignature: true },
+            'collision-course': { name: 'Collision Course', type: 'fighting', power: 120, accuracy: 100, pp: 5, damageClass: 'physical', isSignature: true },
+            'electro-drift':    { name: 'Electro Drift', type: 'electric', power: 120, accuracy: 100, pp: 5, damageClass: 'special', isSignature: true },
+            'draco-meteor':     { name: 'Draco Meteor', type: 'dragon', power: 130, accuracy: 90, pp: 5, damageClass: 'special', isSignature: true },
+            'earth-power':      { name: 'Earth Power', type: 'ground', power: 90, accuracy: 100, pp: 10, damageClass: 'special' },
+            'shadow-ball':      { name: 'Shadow Ball', type: 'ghost', power: 85, accuracy: 100, pp: 15, damageClass: 'special' },
+            'brave-bird':       { name: 'Brave Bird', type: 'flying', power: 120, accuracy: 100, pp: 15, damageClass: 'physical' },
+            'thunder':          { name: 'Thunder', type: 'electric', power: 110, accuracy: 85, pp: 10, damageClass: 'special', ailment: 'PAR', ailmentChance: 30 },
+            'solar-beam':       { name: 'Solar Beam', type: 'grass', power: 120, accuracy: 100, pp: 10, damageClass: 'special' },
+            'moonblast':        { name: 'Moonblast', type: 'fairy', power: 95, accuracy: 100, pp: 15, damageClass: 'special' },
+            'wild-charge':      { name: 'Wild Charge', type: 'electric', power: 90, accuracy: 100, pp: 15, damageClass: 'physical' },
+            'hydro-cannon':     { name: 'Hydro Cannon', type: 'water', power: 135, accuracy: 90, pp: 5, damageClass: 'special', isSignature: true },
+            'frenzy-plant':     { name: 'Frenzy Plant', type: 'grass', power: 135, accuracy: 90, pp: 5, damageClass: 'special', isSignature: true },
+            'leaf-blade':       { name: 'Leaf Blade', type: 'grass', power: 90, accuracy: 100, pp: 15, damageClass: 'physical', isSignature: true },
+            'blaze-kick':       { name: 'Blaze Kick', type: 'fire', power: 85, accuracy: 90, pp: 10, damageClass: 'physical', ailment: 'BRN', ailmentChance: 20 },
+            'mach-punch':       { name: 'Mach Punch', type: 'fighting', power: 60, accuracy: 100, pp: 25, damageClass: 'physical' },
+            'hurricane':        { name: 'Hurricane', type: 'flying', power: 110, accuracy: 85, pp: 10, damageClass: 'special' },
+            'heat-wave':        { name: 'Heat Wave', type: 'fire', power: 95, accuracy: 90, pp: 10, damageClass: 'special', ailment: 'BRN', ailmentChance: 20 },
+            'water-pulse':      { name: 'Water Pulse', type: 'water', power: 70, accuracy: 100, pp: 20, damageClass: 'special' },
+            // ==================== STANDARD ICONIC MOVES ====================
+            'thunderbolt':    { name: 'Thunderbolt', type: 'electric', power: 90, accuracy: 100, pp: 15, damageClass: 'special', ailment: 'PAR', ailmentChance: 15 },
+            'electro-ball':   { name: 'Electro Ball', type: 'electric', power: 80, accuracy: 100, pp: 15, damageClass: 'special', multiShot: 1 },
+            'volt-tackle':    { name: 'Volt Tackle', type: 'electric', power: 110, accuracy: 100, pp: 10, damageClass: 'physical', ailment: 'PAR', ailmentChance: 15 },
+            'iron-tail':      { name: 'Iron Tail', type: 'steel', power: 100, accuracy: 85, pp: 15, damageClass: 'physical' },
+            'quick-attack':   { name: 'Quick Attack', type: 'normal', power: 55, accuracy: 100, pp: 25, damageClass: 'physical' },
+            'flamethrower':   { name: 'Flamethrower', type: 'fire', power: 90, accuracy: 100, pp: 15, damageClass: 'special', ailment: 'BRN', ailmentChance: 15 },
+            'dragon-claw':    { name: 'Dragon Claw', type: 'dragon', power: 80, accuracy: 100, pp: 15, damageClass: 'physical' },
+            'air-slash':      { name: 'Air Slash', type: 'flying', power: 75, accuracy: 95, pp: 15, damageClass: 'special', multiShot: 3 },
+            'overheat':       { name: 'Overheat', type: 'fire', power: 115, accuracy: 90, pp: 5, damageClass: 'special', ailment: 'BRN', ailmentChance: 25 },
+            'water-shuriken': { name: 'Water Shuriken', type: 'water', power: 75, accuracy: 100, pp: 20, damageClass: 'special', multiShot: 3 },
+            'hydro-pump':     { name: 'Hydro Pump', type: 'water', power: 110, accuracy: 85, pp: 5, damageClass: 'special' },
+            'aerial-ace':     { name: 'Aerial Ace', type: 'flying', power: 65, accuracy: 100, pp: 20, damageClass: 'physical' },
+            'night-slash':    { name: 'Night Slash', type: 'dark', power: 75, accuracy: 100, pp: 15, damageClass: 'physical' },
+            'ice-beam':       { name: 'Ice Beam', type: 'ice', power: 90, accuracy: 100, pp: 10, damageClass: 'special', ailment: 'FRZ', ailmentChance: 12 },
+            'flash-cannon':   { name: 'Flash Cannon', type: 'steel', power: 80, accuracy: 100, pp: 10, damageClass: 'special' },
+            'skull-bash':     { name: 'Skull Bash', type: 'normal', power: 100, accuracy: 100, pp: 10, damageClass: 'physical' },
+            'thunder-punch':  { name: 'Thunder Punch', type: 'electric', power: 75, accuracy: 100, pp: 15, damageClass: 'physical', ailment: 'PAR', ailmentChance: 15 },
+            'ice-punch':      { name: 'Ice Punch', type: 'ice', power: 75, accuracy: 100, pp: 15, damageClass: 'physical' },
+            'earthquake':     { name: 'Earthquake', type: 'ground', power: 100, accuracy: 100, pp: 10, damageClass: 'physical' },
+            'bullet-punch':   { name: 'Bullet Punch', type: 'steel', power: 60, accuracy: 100, pp: 25, damageClass: 'physical' },
+            'x-scissor':      { name: 'X-Scissor', type: 'bug', power: 80, accuracy: 100, pp: 15, damageClass: 'physical' },
+            'blast-burn':     { name: 'Blast Burn', type: 'fire', power: 125, accuracy: 90, pp: 5, damageClass: 'special', ailment: 'BRN', ailmentChance: 30 },
+            'dragon-pulse':   { name: 'Dragon Pulse', type: 'dragon', power: 85, accuracy: 100, pp: 10, damageClass: 'special' },
+            'muddy-water':    { name: 'Muddy Water', type: 'water', power: 90, accuracy: 85, pp: 10, damageClass: 'special' },
+            'sludge-bomb':    { name: 'Sludge Bomb', type: 'poison', power: 90, accuracy: 100, pp: 10, damageClass: 'special', ailment: 'PSN', ailmentChance: 25 },
+            'meteor-mash':    { name: 'Meteor Mash', type: 'steel', power: 90, accuracy: 90, pp: 10, damageClass: 'physical' },
+            'psychic':        { name: 'Psychic', type: 'psychic', power: 90, accuracy: 100, pp: 10, damageClass: 'special' },
+            'stone-edge':     { name: 'Stone Edge', type: 'rock', power: 100, accuracy: 80, pp: 5, damageClass: 'physical', multiShot: 3 },
+            'dark-pulse':     { name: 'Dark Pulse', type: 'dark', power: 80, accuracy: 100, pp: 15, damageClass: 'special' },
+            'crunch':         { name: 'Crunch', type: 'dark', power: 80, accuracy: 100, pp: 15, damageClass: 'physical' },
+            'flare-blitz':    { name: 'Flare Blitz', type: 'fire', power: 115, accuracy: 100, pp: 10, damageClass: 'physical', ailment: 'BRN', ailmentChance: 20 },
+            'aura-sphere':    { name: 'Aura Sphere', type: 'fighting', power: 85, accuracy: 100, pp: 20, damageClass: 'special' },
+            'close-combat':   { name: 'Close Combat', type: 'fighting', power: 115, accuracy: 100, pp: 5, damageClass: 'physical' },
+            'extreme-speed':  { name: 'Extreme Speed', type: 'normal', power: 80, accuracy: 100, pp: 5, damageClass: 'physical' },
+            'surf':           { name: 'Surf', type: 'water', power: 90, accuracy: 100, pp: 15, damageClass: 'special' },
+            'dragon-rush':    { name: 'Dragon Rush', type: 'dragon', power: 100, accuracy: 85, pp: 10, damageClass: 'physical' },
+            'dazzling-gleam': { name: 'Dazzling Gleam', type: 'fairy', power: 80, accuracy: 100, pp: 10, damageClass: 'special' }
+        };
+
+        /**
+         * ============================================================================
+         * 4. POKÉAPI REAL-TIME FETCHER & GEN V ANIMATED SPRITE LOADER
+         * ============================================================================
+         */
+        const PokeApiService = {
+            pokemonCache: {},
+            moveCache: {},
+
+            async fetchPokemon(entry) {
+                const queryKey = String(entry.id || entry.name).toLowerCase().trim();
+                if (this.pokemonCache[queryKey]) {
+                    return JSON.parse(JSON.stringify(this.pokemonCache[queryKey]));
+                }
+
+                try {
+                    const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${queryKey}`);
+                    if (!res.ok) throw new Error('Pokemon not found');
+                    const data = await res.json();
+
+                    const bwAnimated = data.sprites?.versions?.['generation-v']?.['black-white']?.animated;
+                    const frontSprite = bwAnimated?.front_default ||
+                                        data.sprites?.other?.showdown?.front_default ||
+                                        data.sprites?.front_default;
+
+                    const baseStats = {};
+                    if (Array.isArray(data.stats)) {
+                        data.stats.forEach(s => {
+                            baseStats[s.stat.name] = s.base_stat;
+                        });
+                    }
+
+                    // Determine 4 moves:
+                    // 1) Explicit preset moves, 2) Authentic Signature Moveset by ID or Name, or 3) High-level PokéAPI learnset
+                    let moveSlugs = entry.moves;
+                    if (!moveSlugs || moveSlugs.length === 0) {
+                        const cleanName = data.name.toLowerCase();
+                        const baseSpeciesName = cleanName.split('-')[0];
+                        if (SIGNATURE_MOVESETS[String(data.id)]) {
+                            moveSlugs = SIGNATURE_MOVESETS[String(data.id)];
+                        } else if (SIGNATURE_MOVESETS[cleanName]) {
+                            moveSlugs = SIGNATURE_MOVESETS[cleanName];
+                        } else if (SIGNATURE_MOVESETS[baseSpeciesName]) {
+                            moveSlugs = SIGNATURE_MOVESETS[baseSpeciesName];
+                        } else {
+                            // Prioritize signature/known moves from the Pokémon's actual PokéAPI learnset (reversed so high-ID/signature moves come first)
+                            const apiMoveNames = data.moves.map(m => m.move.name);
+                            const signatureMatches = apiMoveNames.filter(name => FALLBACK_MOVES[name]?.isSignature);
+                            const knownMatches = apiMoveNames.filter(name => FALLBACK_MOVES[name] && !FALLBACK_MOVES[name].isSignature).reverse();
+                            const rawReversed = [...apiMoveNames].reverse();
+                            const defaultPool = ['thunderbolt', 'flamethrower', 'ice-beam', 'aura-sphere'];
+                            moveSlugs = [...new Set([...signatureMatches, ...knownMatches, ...rawReversed, ...defaultPool])].slice(0, 4);
+                        }
+                    }
+
+                    const moves = await Promise.all(moveSlugs.slice(0, 4).map(m => this.fetchMove(m)));
+
+                    const combatant = this.buildCombatant({
+                        id: data.id,
+                        name: data.name.toUpperCase(),
+                        types: data.types.map(t => t.type.name),
+                        baseStats,
+                        sprite: frontSprite,
+                        cry: data.cries?.latest || null,
+                        moves
+                    });
+
+                    this.pokemonCache[queryKey] = combatant;
+                    return JSON.parse(JSON.stringify(combatant));
+                } catch (err) {
+                    const fbMoves = await Promise.all((entry.moves || ['thunderbolt', 'quick-attack', 'iron-tail', 'electro-ball']).map(m => this.fetchMove(m)));
+                    return this.buildCombatant({
+                        id: entry.id || 25,
+                        name: String(entry.name || 'PIKACHU').toUpperCase(),
+                        types: ['electric'],
+                        baseStats: { hp: 80, attack: 90, defense: 80, 'special-attack': 95, 'special-defense': 80, speed: 105 },
+                        sprite: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/${entry.id || 25}.gif`,
+                        cry: null,
+                        moves: fbMoves
+                    });
+                }
+            },
+
+            async fetchMove(slug) {
+                const s = slug.toLowerCase();
+                if (this.moveCache[s]) {
+                    return JSON.parse(JSON.stringify(this.moveCache[s]));
+                }
+
+                // Check curated fallback first for instant response, then enrich via API if needed
+                if (FALLBACK_MOVES[s]) {
+                    const fb = FALLBACK_MOVES[s];
+                    const archetype = classifyMoveSpatialArchetype(s, fb.damageClass, fb.type, fb.power);
+                    const cooldownMax = archetype === 'BEAM' ? 3.4 : (archetype === 'AOE' ? 4.2 : (archetype === 'BLITZ' ? 2.5 : 1.7));
+                    const moveObj = {
+                        slug: s,
+                        name: fb.name,
+                        type: fb.type,
+                        power: fb.power,
+                        accuracy: fb.accuracy,
+                        pp: fb.pp,
+                        maxPp: fb.pp,
+                        damageClass: fb.damageClass,
+                        ailment: fb.ailment || null,
+                        ailmentChance: fb.ailmentChance || 0,
+                        multiShot: fb.multiShot || (s.includes('shuriken') || s.includes('slash') ? 3 : 1),
+                        isSignature: Boolean(fb.isSignature),
+                        archetype,
+                        cooldown: 0,
+                        cooldownMax
+                    };
+                    this.moveCache[s] = moveObj;
+                    return JSON.parse(JSON.stringify(moveObj));
+                }
+
+                try {
+                    const res = await fetch(`https://pokeapi.co/api/v2/move/${s}`);
+                    if (!res.ok) throw new Error('Move fetch error');
+                    const data = await res.json();
+
+                    const power = data.power || 75;
+                    const damageClass = data.damage_class?.name || 'special';
+                    const type = data.type?.name || 'normal';
+                    const archetype = classifyMoveSpatialArchetype(s, damageClass, type, power);
+                    const cooldownMax = archetype === 'BEAM' ? 3.5 : (archetype === 'AOE' ? 4.2 : (archetype === 'BLITZ' ? 2.5 : 1.8));
+
+                    const moveObj = {
+                        slug: s,
+                        name: data.names?.find(n => n.language.name === 'en')?.name || s.replace(/-/g, ' ').toUpperCase(),
+                        type,
+                        power,
+                        accuracy: data.accuracy || 100,
+                        pp: data.pp || 15,
+                        maxPp: data.pp || 15,
+                        damageClass,
+                        ailment: null,
+                        ailmentChance: 0,
+                        multiShot: 1,
+                        archetype,
+                        cooldown: 0,
+                        cooldownMax
+                    };
+                    this.moveCache[s] = moveObj;
+                    return JSON.parse(JSON.stringify(moveObj));
+                } catch (e) {
+                    return {
+                        slug: s,
+                        name: s.replace(/-/g, ' ').toUpperCase(),
+                        type: 'normal',
+                        power: 75,
+                        accuracy: 100,
+                        pp: 15,
+                        maxPp: 15,
+                        damageClass: 'physical',
+                        archetype: 'BLITZ',
+                        cooldown: 0,
+                        cooldownMax: 2.2,
+                        multiShot: 1
+                    };
+                }
+            },
+
+            buildCombatant(raw) {
+                const level = 50;
+                const calcStat = (base, isHp = false) => {
+                    if (isHp) return Math.floor(((2 * base + 31 + 21) * level) / 100) + level + 55; // Slightly higher stadium HP pool for real-time action pacing
+                    return Math.floor(((2 * base + 31 + 21) * level) / 100) + 5;
+                };
+
+                const maxHp = calcStat(raw.baseStats['hp'] || 80, true);
+                return {
+                    id: raw.id,
+                    name: raw.name,
+                    level,
+                    types: raw.types,
+                    maxHp,
+                    currentHp: maxHp,
+                    stats: {
+                        attack: calcStat(raw.baseStats['attack'] || 80),
+                        defense: calcStat(raw.baseStats['defense'] || 80),
+                        spAtk: calcStat(raw.baseStats['special-attack'] || 80),
+                        spDef: calcStat(raw.baseStats['special-defense'] || 80),
+                        speed: calcStat(raw.baseStats['speed'] || 85)
+                    },
+                    status: null, // 'PAR', 'BRN', 'PSN', 'FRZ'
+                    statusTimer: 0,
+                    stamina: 100,
+                    fainted: false,
+                    sprite: raw.sprite,
+                    cry: raw.cry,
+                    moves: raw.moves,
+
+                    // 2.5D Spatial Physics State
+                    x: -240,
+                    y: 40,
+                    z: 0,
+                    vx: 0,
+                    vy: 0,
+                    vz: 0,
+                    facing: 1, // 1 = right, -1 = left
+                    radius: 34,
+                    bobPhase: 0,
+
+                    // Tactical States
+                    iFrames: 0,
+                    perfectDodgeWindow: 0,
+                    dashTimer: 0,
+                    dashDirX: 0,
+                    dashDirY: 0,
+                    counterShieldTimer: 0,
+                    guarding: false,
+                    blitzState: null, // Active melee dash state
+                    hitFlashTimer: 0,
+                    afterimages: []
+                };
+            }
+        };
+
+        /**
+         * ============================================================================
+         * 5. 2.5D REAL-TIME STADIUM ACTION ENGINE (MOVEMENT, CAMERA, HAZARDS, AI)
+         * ============================================================================
+         */
+        const GameEngine = {
+            canvas: null,
+            ctx: null,
+            width: 960,
+            height: 500,
+
+            // 2.5D World Bounds & Perspective Constants
+            WORLD_HALF_W: 470,
+            WORLD_HALF_H: 255,
+            Y_SCALE: 0.62, // Semi-top-down 2.5D foreshortening ratio
+
+            // Dynamic Camera State
+            camera: {
+                x: 0,
+                y: 0,
+                zoom: 1.0,
+                targetZoom: 1.0,
+                shakeTimer: 0,
+                shakeMagnitude: 0
+            },
+
+            // Match State
+            playerTrainer: 'ASH KETCHUM',
+            enemyTrainer: 'RIVAL GARY OAK',
+            playerParty: [],
+            enemyParty: [],
+            playerActiveIdx: 0,
+            enemyActiveIdx: 0,
+            matchOver: false,
+            paused: false,
+            hitStopTimer: 0,
+            timeScale: 1.0,
+            slowMoTimer: 0,
+
+            // Player Bond Sync & Overdrive
+            bondSync: 25,
+            overdriveTimer: 0,
+            matchElapsed: 0,
+
+            // Input & Aiming State
+            keys: {},
+            joyVec: { x: 0, y: 0, active: false },
+            aimMode: 'auto', // 'auto' or 'cursor'
+            mouseWorld: { x: 200, y: 0 },
+
+            // Pre-generated Stadium Spectators & Floodlights for Realistic Colosseum Atmosphere
+            crowdSpectators: [],
+
+            // Spatial Entities in 2.5D Arena
+            projectiles: [],
+            beams: [],
+            aoeWaves: [],
+            hazards: [],     // { type: 'puddle' | 'electrified_puddle' | 'magma', x, y, radius, timer }
+            pillars: [],     // { x, y, radius, hp, maxHp, height }
+            particles: [],
+            floatingTexts: [],
+
+            // Enemy Real-Time AI State
+            ai: {
+                state: 'STRAFE',
+                strafeDir: 1,
+                thinkTimer: 0,
+                attackCooldown: 1.2
+            },
+
+            get player() {
+                return this.playerParty[this.playerActiveIdx];
+            },
+            get enemy() {
+                return this.enemyParty[this.enemyActiveIdx];
+            },
+
+            init() {
+                this.canvas = document.getElementById('stadiumCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+
+                this.generateStadiumSpectators();
+                this.bindControls();
+                this.initMatch('ash_gary');
+
+                this.lastTime = performance.now();
+                requestAnimationFrame((t) => this.loop(t));
+            },
+
+            generateStadiumSpectators() {
+                this.crowdSpectators = [];
+                const colors = ['#38bdf8', '#facc15', '#f43f5e', '#a855f7', '#4ade80', '#ffffff'];
+                for (let row = 0; row < 3; row++) {
+                    const count = 46 + row * 8;
+                    for (let i = 0; i < count; i++) {
+                        this.crowdSpectators.push({
+                            row,
+                            pct: (i + 0.5) / count,
+                            color: colors[(i * 7 + row * 3) % colors.length],
+                            phase: Math.random() * Math.PI * 2,
+                            speed: 3 + Math.random() * 3
+                        });
+                    }
+                }
+            },
+
+            resize() {
+                if (!this.canvas) return;
+                const rect = this.canvas.parentElement.getBoundingClientRect();
+                this.width = rect.width;
+                this.height = rect.height;
+                this.canvas.width = this.width * window.devicePixelRatio;
+                this.canvas.height = this.height * window.devicePixelRatio;
+                this.ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            },
+
+            setKeyVisual(id, active) {
+                const el = document.getElementById(id);
+                if (el) el.classList.toggle('keycap-active', active);
+            },
+
+            bindControls() {
+                window.addEventListener('keydown', (e) => {
+                    this.keys[e.key.toLowerCase()] = true;
+                    if (e.code === 'Space' || e.key === ' ') {
+                        this.keys['space'] = true;
+                        e.preventDefault();
+                    }
+                    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.code)) {
+                        e.preventDefault();
+                    }
+
+                    // Key bindings mapping
+                    if (e.key === '1' || e.key === 'j' || e.key === 'J') this.useMove(0);
+                    if (e.key === '2' || e.key === 'k' || e.key === 'K') this.useMove(1);
+                    if (e.key === '3' || e.key === 'l' || e.key === 'L') this.useMove(2);
+                    if (e.key === '4' || e.key === 'u' || e.key === 'U') this.useMove(3);
+                    if (e.key === ' ' || e.code === 'Space' || e.key === 'Shift') this.triggerDodgeDash();
+                    if (e.key === 'e' || e.key === 'E' || e.key === 'i' || e.key === 'I') this.triggerCounterShield();
+                    if (e.key === 'r' || e.key === 'R') this.activateOverdrive();
+                    if (e.key === 'f' || e.key === 'F') this.toggleAimMode();
+                    if (e.key === 'z' || e.key === 'Z') this.switchPartyOffset(1);
+                    if (e.key === 'x' || e.key === 'X') this.switchPartyOffset(2);
+                    if (e.key === 'c' || e.key === 'C' || e.key === 'Tab') {
+                        e.preventDefault();
+                        this.switchPartyOffset(1);
+                    }
+                });
+
+                window.addEventListener('keyup', (e) => {
+                    this.keys[e.key.toLowerCase()] = false;
+                    if (e.code === 'Space' || e.key === ' ') {
+                        this.keys['space'] = false;
+                    }
+                });
+
+                // Mouse Aim & Guard on Viewport
+                const vp = document.getElementById('arenaViewport');
+                vp.addEventListener('mousemove', (e) => {
+                    const rect = vp.getBoundingClientRect();
+                    this.mouseWorld = this.screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
+                });
+
+                vp.addEventListener('contextmenu', (e) => e.preventDefault());
+
+                // Virtual On-Screen Joystick Drag
+                const joyZone = document.getElementById('virtualJoystickZone');
+                const knob = document.getElementById('joystickKnob');
+                let joyActive = false;
+                let joyCenter = { x: 0, y: 0 };
+
+                const handleJoyStart = (clientX, clientY) => {
+                    joyActive = true;
+                    const rect = joyZone.getBoundingClientRect();
+                    joyCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+                };
+                const handleJoyMove = (clientX, clientY) => {
+                    if (!joyActive) return;
+                    const dx = clientX - joyCenter.x;
+                    const dy = clientY - joyCenter.y;
+                    const dist = Math.hypot(dx, dy);
+                    const maxR = 36;
+                    const angle = Math.atan2(dy, dx);
+                    const clampedDist = Math.min(dist, maxR);
+
+                    const kx = Math.cos(angle) * clampedDist;
+                    const ky = Math.sin(angle) * clampedDist;
+                    knob.style.transform = `translate(${kx}px, ${ky}px)`;
+
+                    this.joyVec.x = clampedDist > 6 ? Math.cos(angle) * (clampedDist / maxR) : 0;
+                    this.joyVec.y = clampedDist > 6 ? Math.sin(angle) * (clampedDist / maxR) : 0;
+                    this.joyVec.active = clampedDist > 6;
+                };
+                const handleJoyEnd = () => {
+                    joyActive = false;
+                    knob.style.transform = `translate(0px, 0px)`;
+                    this.joyVec.x = 0;
+                    this.joyVec.y = 0;
+                    this.joyVec.active = false;
+                };
+
+                joyZone.addEventListener('mousedown', (e) => handleJoyStart(e.clientX, e.clientY));
+                window.addEventListener('mousemove', (e) => handleJoyMove(e.clientX, e.clientY));
+                window.addEventListener('mouseup', handleJoyEnd);
+
+                joyZone.addEventListener('touchstart', (e) => {
+                    handleJoyStart(e.touches[0].clientX, e.touches[0].clientY);
+                    e.preventDefault();
+                }, { passive: false });
+                window.addEventListener('touchmove', (e) => {
+                    if (e.touches.length > 0) handleJoyMove(e.touches[0].clientX, e.touches[0].clientY);
+                }, { passive: true });
+                window.addEventListener('touchend', handleJoyEnd);
+
+                // UI bindings
+                document.getElementById('rivalrySelect').addEventListener('change', (e) => {
+                    this.initMatch(e.target.value);
+                });
+                document.getElementById('restartBtn').addEventListener('click', () => {
+                    this.initMatch(document.getElementById('rivalrySelect').value);
+                });
+                document.getElementById('soundToggleBtn').addEventListener('click', () => {
+                    SoundEngine.enabled = !SoundEngine.enabled;
+                    const icon = document.getElementById('soundIcon');
+                    icon.className = SoundEngine.enabled ? 'fa-solid fa-volume-high text-cyan-400' : 'fa-solid fa-volume-xmark text-slate-500';
+                });
+                document.getElementById('mechanicsHelpBtn').addEventListener('click', () => {
+                    document.getElementById('helpModal').classList.remove('hidden');
+                });
+            },
+
+            async initMatch(rivalryKey = 'ash_gary', customTeams = null) {
+                this.matchOver = false;
+                this.paused = false;
+                this.bondSync = 25;
+                this.overdriveTimer = 0;
+                this.matchElapsed = 0;
+                this.projectiles = [];
+                this.beams = [];
+                this.aoeWaves = [];
+                this.hazards = [];
+                this.pillars = [];
+                this.particles = [];
+                this.floatingTexts = [];
+
+                document.getElementById('loadingOverlay').classList.remove('hidden');
+                document.getElementById('resultModal').classList.add('hidden');
+
+                let rivalry = RIVALRIES[rivalryKey] || RIVALRIES['ash_gary'];
+                if (customTeams) {
+                    rivalry = customTeams;
+                }
+
+                this.playerTrainer = rivalry.playerTrainer;
+                this.enemyTrainer = rivalry.enemyTrainer;
+                document.getElementById('playerTrainerLabel').innerHTML = `<i class="fa-solid fa-crown text-[9px] text-amber-400"></i>${this.playerTrainer} (YOU)`;
+                document.getElementById('enemyTrainerLabel').innerText = this.enemyTrainer;
+
+                try {
+                    this.playerParty = await Promise.all(rivalry.playerTeam.map(entry => PokeApiService.fetchPokemon(entry)));
+                    this.enemyParty = await Promise.all(rivalry.enemyTeam.map(entry => PokeApiService.fetchPokemon(entry)));
+                } catch (e) {
+                    console.error('API Error:', e);
+                }
+
+                this.playerActiveIdx = 0;
+                this.enemyActiveIdx = 0;
+
+                // Set initial stadium positions
+                this.player.x = -240;
+                this.player.y = 30;
+                this.player.facing = 1;
+
+                this.enemy.x = 240;
+                this.enemy.y = -30;
+                this.enemy.facing = -1;
+
+                this.updateHud();
+                this.renderPartySwitchBar();
+                this.renderMovesDeck();
+
+                document.getElementById('loadingOverlay').classList.add('hidden');
+                this.logAnnouncer(`Match underway! ${this.playerTrainer} sends out ${this.player.name}!`, 'amber');
+                this.logAnnouncer(`${this.enemyTrainer} sends out ${this.enemy.name}!`, 'red');
+            },
+
+            openRosterModal() {
+                document.getElementById('rosterModal').classList.remove('hidden');
+            },
+
+            fillModalPreset(pList, eList) {
+                document.getElementById('customP1').value = pList[0];
+                document.getElementById('customP2').value = pList[1];
+                document.getElementById('customP3').value = pList[2];
+                document.getElementById('customE1').value = eList[0];
+                document.getElementById('customE2').value = eList[1];
+                document.getElementById('customE3').value = eList[2];
+            },
+
+            async loadCustomRoster() {
+                const p1 = document.getElementById('customP1').value.trim() || 'pikachu';
+                const p2 = document.getElementById('customP2').value.trim() || 'charizard';
+                const p3 = document.getElementById('customP3').value.trim() || 'lucario';
+                const e1 = document.getElementById('customE1').value.trim() || 'blastoise';
+                const e2 = document.getElementById('customE2').value.trim() || 'electivire';
+                const e3 = document.getElementById('customE3').value.trim() || 'garchomp';
+
+                document.getElementById('rosterModal').classList.add('hidden');
+                await this.initMatch('custom', {
+                    playerTrainer: 'CUSTOM TRAINER',
+                    enemyTrainer: 'CUSTOM RIVAL',
+                    playerTeam: [{ name: p1 }, { name: p2 }, { name: p3 }],
+                    enemyTeam: [{ name: e1 }, { name: e2 }, { name: e3 }]
+                });
+            },
+
+            toggleAimMode() {
+                this.aimMode = this.aimMode === 'auto' ? 'cursor' : 'auto';
+                const txt = document.getElementById('aimModeText');
+                txt.innerText = this.aimMode === 'auto' ? 'AIM: AUTO-LOCK [F]' : 'AIM: CURSOR [F]';
+                this.logAnnouncer(`Aim Mode switched to: ${this.aimMode.toUpperCase()}`, 'cyan');
+            },
+
+            triggerDodgeDash() {
+                const p = this.player;
+                if (!p || p.fainted || p.dashTimer > 0 || p.stamina < 22) return;
+
+                p.stamina -= 22;
+                p.dashTimer = 0.32; // 320ms i-frame dash
+                p.iFrames = 0.38;
+
+                // Determine dash direction from movement keys or joystick
+                let dx = 0, dy = 0;
+                if (this.keys['w'] || this.keys['arrowup']) dy -= 1;
+                if (this.keys['s'] || this.keys['arrowdown']) dy += 1;
+                if (this.keys['a'] || this.keys['arrowleft']) dx -= 1;
+                if (this.keys['d'] || this.keys['arrowright']) dx += 1;
+
+                if (this.joyVec.active) {
+                    dx = this.joyVec.x;
+                    dy = this.joyVec.y;
+                }
+
+                if (dx === 0 && dy === 0) {
+                    dx = p.facing; // Dash forward if no direction held
+                }
+
+                const len = Math.hypot(dx, dy) || 1;
+                p.dashDirX = (dx / len) * 440;
+                p.dashDirY = (dy / len) * 440;
+
+                SoundEngine.playSfx('dash');
+                this.triggerAnimeCallout(this.playerTrainer, `"${p.name}, dodge it with lightning speed!"`, 'cyan');
+            },
+
+            triggerCounterShield() {
+                const p = this.player;
+                if (!p || p.fainted || p.counterShieldTimer > 0 || p.stamina < 35) return;
+
+                p.stamina -= 35;
+                p.counterShieldTimer = 0.65; // 650ms spinning vortex
+                SoundEngine.playSfx('counter_shield');
+                this.triggerAnimeCallout(this.playerTrainer, `"${p.name}, spin the Counter-Shield!"`, 'purple');
+
+                // Vaporize incoming enemy projectiles within 90px
+                this.projectiles = this.projectiles.filter(proj => {
+                    if (proj.isEnemy) {
+                        const dist = Math.hypot(proj.x - p.x, proj.y - p.y);
+                        if (dist < 95) {
+                            this.spawnExplosion(proj.x, proj.y, '#a855f7');
+                            return false;
+                        }
+                    }
+                    return true;
+                });
+            },
+
+            setGuard(isGuarding) {
+                const p = this.player;
+                if (p) p.guarding = isGuarding;
+                this.setKeyVisual('btnGuard', isGuarding);
+            },
+
+            activateOverdrive() {
+                if (this.bondSync < 100 || this.overdriveTimer > 0) return;
+                this.overdriveTimer = 12.0; // 12 seconds of overdrive
+                this.bondSync = 0;
+                SoundEngine.playSfx('perfect_dodge');
+                document.getElementById('speedLinesOverlay').style.opacity = '1';
+                this.triggerAnimeCallout(this.playerTrainer, `"FULL POWER! BOND OVERDRIVE SYNC!"`, 'yellow');
+                this.logAnnouncer(`★ BOND OVERDRIVE ACTIVATED! Attack & Speed surged!`, 'amber');
+            },
+
+            switchPartyOffset(offset) {
+                if (this.matchOver) return;
+                const nextIdx = (this.playerActiveIdx + offset) % this.playerParty.length;
+                if (this.playerParty[nextIdx].fainted) {
+                    // Try next
+                    const altIdx = this.playerParty.findIndex((pk, i) => i !== this.playerActiveIdx && !pk.fainted);
+                    if (altIdx !== -1) {
+                        this.switchPokemon(altIdx);
+                    }
+                    return;
+                }
+                this.switchPokemon(nextIdx);
+            },
+
+            switchPokemon(idx) {
+                if (this.playerParty[idx].fainted || idx === this.playerActiveIdx) return;
+                this.playerActiveIdx = idx;
+                const pk = this.player;
+                this.updateHud();
+                this.renderMovesDeck();
+                this.renderPartySwitchBar();
+                SoundEngine.playCry(pk.cry);
+                this.spawnExplosion(pk.x, pk.y, '#38bdf8');
+                this.logAnnouncer(`${this.playerTrainer} switched to ${pk.name}!`, 'cyan');
+            },
+
+            useMove(moveIdx) {
+                if (this.matchOver || this.paused) return;
+                const p = this.player;
+                if (!p || p.fainted) return;
+                const move = p.moves[moveIdx];
+                if (!move || move.cooldown > 0) return;
+
+                if (p.stamina < 18) {
+                    this.logAnnouncer(`${p.name} is too exhausted to attack! Rest stamina!`, 'red');
+                    return;
+                }
+
+                p.stamina -= 16;
+                move.cooldown = move.cooldownMax;
+
+                // Determine target coordinates (Enemy position or mouse cursor in cursor mode)
+                let tx = this.enemy.x;
+                let ty = this.enemy.y;
+                if (this.aimMode === 'cursor') {
+                    tx = this.mouseWorld.x;
+                    ty = this.mouseWorld.y;
+                }
+
+                this.triggerAnimeCallout(this.playerTrainer, `"${p.name}, use ${move.name}!"`, TYPE_COLORS[move.type]?.hex || '#facc15');
+                SoundEngine.playSfx(move.archetype === 'BEAM' ? 'beam_charge' : 'dash');
+
+                // Execute Spatial Move based on archetype
+                if (move.archetype === 'BEAM') {
+                    this.spawnBeam(p.x, p.y, tx, ty, move, false);
+                } else if (move.archetype === 'AOE') {
+                    this.spawnAoeWave(p.x, p.y, move, false);
+                } else if (move.archetype === 'BLITZ') {
+                    this.executeBlitz(p, tx, ty, move, false);
+                } else {
+                    // PROJECTILE / BARRAGE
+                    const count = move.multiShot || 1;
+                    for (let i = 0; i < count; i++) {
+                        setTimeout(() => {
+                            if (!this.matchOver) this.spawnProjectile(p.x, p.y, tx, ty, move, false);
+                        }, i * 90);
+                    }
+                }
+
+                // Increase Bond Sync
+                this.bondSync = Math.min(100, this.bondSync + 12);
+                this.updateHud();
+            },
+
+            spawnProjectile(sx, sy, tx, ty, move, isEnemy) {
+                const angle = Math.atan2(ty - sy, tx - sx) + (isEnemy ? (Math.random() - 0.5) * 0.35 : 0);
+                const speed = 480;
+                this.projectiles.push({
+                    x: sx,
+                    y: sy,
+                    z: 14,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    vz: 0,
+                    move,
+                    isEnemy,
+                    rangeLeft: 700,
+                    radius: 14
+                });
+            },
+
+            spawnBeam(sx, sy, tx, ty, move, isEnemy) {
+                const angle = Math.atan2(ty - sy, tx - sx);
+                this.beams.push({
+                    x: sx,
+                    y: sy,
+                    angle,
+                    move,
+                    isEnemy,
+                    chargeTimer: 0.45, // 450ms warning laser line before firing
+                    activeTimer: 0.35, // 350ms active laser beam
+                    fired: false
+                });
+                SoundEngine.playSfx('beam_charge');
+            },
+
+            spawnAoeWave(x, y, move, isEnemy) {
+                this.aoeWaves.push({
+                    x,
+                    y,
+                    radius: 20,
+                    maxRadius: 210,
+                    move,
+                    isEnemy,
+                    alpha: 0.95
+                });
+                SoundEngine.playSfx('hit_super');
+            },
+
+            executeBlitz(attacker, tx, ty, move, isEnemy) {
+                attacker.blitzState = {
+                    startX: attacker.x,
+                    startY: attacker.y,
+                    targetX: tx,
+                    targetY: ty,
+                    progress: 0,
+                    duration: 0.28,
+                    move,
+                    isEnemy
+                };
+                SoundEngine.playSfx('dash');
+            },
+
+            spawnExplosion(x, y, colorHex) {
+                for (let i = 0; i < 18; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = 60 + Math.random() * 180;
+                    this.particles.push({
+                        x, y, z: 15,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        vz: (Math.random() - 0.5) * 120,
+                        color: colorHex,
+                        radius: 3 + Math.random() * 4,
+                        alpha: 1.0,
+                        life: 0.4 + Math.random() * 0.3
+                    });
+                }
+            },
+
+            spawnFloatingText(text, x, y, color) {
+                this.floatingTexts.push({
+                    text, x, y, color,
+                    vy: -45,
+                    alpha: 1.0,
+                    life: 0.85
+                });
+            },
+
+            triggerAnimeCallout(trainerName, subtitle, glowHex) {
+                const banner = document.getElementById('animeCalloutBanner');
+                const sub = document.getElementById('animeCalloutSub');
+                const main = document.getElementById('animeCalloutMain');
+                const bg = document.getElementById('animeCalloutBg');
+
+                sub.innerText = `${trainerName.toUpperCase()} COMMANDS`;
+                main.innerText = subtitle;
+                bg.style.borderColor = glowHex;
+
+                banner.classList.remove('hidden');
+                banner.classList.remove('banner-slash-active');
+                void banner.offsetWidth; // trigger reflow
+                banner.classList.add('banner-slash-active');
+
+                setTimeout(() => {
+                    banner.classList.add('hidden');
+                }, 1350);
+            },
+
+            logAnnouncer(msg, colorStyle = 'slate') {
+                const log = document.getElementById('announcerLog');
+                const div = document.createElement('div');
+                div.className = `text-[11px] font-bold border-l-2 pl-1.5 py-0.5 ${
+                    colorStyle === 'amber' ? 'border-amber-400 text-amber-300 bg-amber-950/20' :
+                    colorStyle === 'red' ? 'border-red-500 text-red-300 bg-red-950/20' :
+                    colorStyle === 'cyan' ? 'border-cyan-400 text-cyan-300 bg-cyan-950/20' :
+                    colorStyle === 'purple' ? 'border-purple-400 text-purple-300 bg-purple-950/20' :
+                    'border-slate-600 text-slate-300'
+                }`;
+                div.innerHTML = `[${Math.floor(this.matchElapsed / 60).toString().padStart(2, '0')}:${Math.floor(this.matchElapsed % 60).toString().padStart(2, '0')}] ${msg}`;
+                log.appendChild(div);
+                log.scrollTop = log.scrollHeight;
+                while (log.children.length > 28) {
+                    log.removeChild(log.firstChild);
+                }
+            },
+
+            // Main Update Loop
+            loop(timestamp) {
+                const dt = Math.min(0.05, (timestamp - this.lastTime) / 1000);
+                this.lastTime = timestamp;
+
+                if (!this.matchOver && !this.paused) {
+                    this.matchElapsed += dt;
+                    document.getElementById('matchClockHud').innerText = `${Math.floor(this.matchElapsed / 60).toString().padStart(2, '0')}:${Math.floor(this.matchElapsed % 60).toString().padStart(2, '0')}`;
+
+                    this.updatePhysics(dt);
+                    this.updateAi(dt);
+                }
+
+                this.renderFrame();
+                requestAnimationFrame((t) => this.loop(t));
+            },
+
+            updatePhysics(dt) {
+                const p = this.player;
+                const e = this.enemy;
+
+                // 1. Player Movement via WASD / Arrow Keys / Joystick
+                let moveX = 0, moveY = 0;
+                if (this.keys['w'] || this.keys['arrowup']) moveY -= 1;
+                if (this.keys['s'] || this.keys['arrowdown']) moveY += 1;
+                if (this.keys['a'] || this.keys['arrowleft']) moveX -= 1;
+                if (this.keys['d'] || this.keys['arrowright']) moveX += 1;
+
+                if (this.joyVec.active) {
+                    moveX = this.joyVec.x;
+                    moveY = this.joyVec.y;
+                }
+
+                const pSpeed = this.getFighterMoveSpeed(p);
+                if (p.dashTimer > 0) {
+                    p.dashTimer -= dt;
+                    p.x += p.dashDirX * dt;
+                    p.y += p.dashDirY * dt;
+                } else if (moveX !== 0 || moveY !== 0) {
+                    const len = Math.hypot(moveX, moveY) || 1;
+                    p.x += (moveX / len) * pSpeed * dt;
+                    p.y += (moveY / len) * pSpeed * dt;
+                    p.facing = moveX !== 0 ? Math.sign(moveX) : p.facing;
+
+                    // Stamina regeneration when standing still or moving lightly
+                    p.stamina = Math.min(100, p.stamina + 4.5 * dt);
+                } else {
+                    p.stamina = Math.min(100, p.stamina + 12 * dt);
+                }
+
+                // Clamp player within arena bounds
+                p.x = Math.max(-this.WORLD_HALF_W + 35, Math.min(this.WORLD_HALF_W - 35, p.x));
+                p.y = Math.max(-this.WORLD_HALF_H + 35, Math.min(this.WORLD_HALF_H - 35, p.y));
+
+                // Decrement move cooldowns
+                p.moves.forEach(m => {
+                    if (m.cooldown > 0) m.cooldown = Math.max(0, m.cooldown - dt);
+                });
+
+                if (p.iFrames > 0) p.iFrames -= dt;
+                if (p.counterShieldTimer > 0) p.counterShieldTimer -= dt;
+
+                // 2. Blitz State Update
+                if (p.blitzState) {
+                    const b = p.blitzState;
+                    b.progress += dt / b.duration;
+                    p.x = b.startX + (b.targetX - b.startX) * Math.min(1, b.progress);
+                    p.y = b.startY + (b.targetY - b.startY) * Math.min(1, b.progress);
+                    if (b.progress >= 1.0) {
+                        this.resolveHit(p, e, b.move);
+                        this.spawnExplosion(e.x, e.y, TYPE_COLORS[b.move.type]?.hex || '#facc15');
+                        p.blitzState = null;
+                    }
+                }
+
+                if (e.blitzState) {
+                    const b = e.blitzState;
+                    b.progress += dt / b.duration;
+                    e.x = b.startX + (b.targetX - b.startX) * Math.min(1, b.progress);
+                    e.y = b.startY + (b.targetY - b.startY) * Math.min(1, b.progress);
+                    if (b.progress >= 1.0) {
+                        this.resolveHit(e, p, b.move);
+                        this.spawnExplosion(p.x, p.y, TYPE_COLORS[b.move.type]?.hex || '#facc15');
+                        e.blitzState = null;
+                    }
+                }
+
+                // 3. Projectiles Update
+                for (let i = this.projectiles.length - 1; i >= 0; i--) {
+                    const proj = this.projectiles[i];
+                    proj.x += proj.vx * dt;
+                    proj.y += proj.vy * dt;
+                    proj.rangeLeft -= Math.hypot(proj.vx * dt, proj.vy * dt);
+
+                    // Check collisions
+                    const target = proj.isEnemy ? p : e;
+                    const dist = Math.hypot(proj.x - target.x, proj.y - target.y);
+
+                    if (dist < target.radius + proj.radius) {
+                        if (proj.isEnemy && target.iFrames > 0) {
+                            // Dodged via i-frames!
+                            this.spawnFloatingText("DODGE!", target.x, target.y - 40, "#38bdf8");
+                            this.bondSync = Math.min(100, this.bondSync + 6);
+                        } else {
+                            this.resolveHit(proj.isEnemy ? e : p, target, proj.move);
+                            this.spawnExplosion(proj.x, proj.y, TYPE_COLORS[proj.move.type]?.hex || '#facc15');
+                        }
+                        this.projectiles.splice(i, 1);
+                        continue;
+                    }
+
+                    if (proj.rangeLeft <= 0 || Math.abs(proj.x) > this.WORLD_HALF_W + 50 || Math.abs(proj.y) > this.WORLD_HALF_H + 50) {
+                        this.projectiles.splice(i, 1);
+                    }
+                }
+
+                // 4. Beams Update
+                for (let i = this.beams.length - 1; i >= 0; i--) {
+                    const beam = this.beams[i];
+                    if (!beam.fired) {
+                        beam.chargeTimer -= dt;
+                        if (beam.chargeTimer <= 0) {
+                            beam.fired = true;
+                            SoundEngine.playSfx('beam_fire');
+                        }
+                    } else {
+                        beam.activeTimer -= dt;
+                        const target = beam.isEnemy ? p : e;
+                        // Ray-to-point collision check
+                        const dx = target.x - beam.x;
+                        const dy = target.y - beam.y;
+                        const projLen = dx * Math.cos(beam.angle) + dy * Math.sin(beam.angle);
+                        if (projLen > 0 && projLen < 800) {
+                            const perpDist = Math.abs(-Math.sin(beam.angle) * dx + Math.cos(beam.angle) * dy);
+                            if (perpDist < 32) {
+                                if (beam.isEnemy && target.iFrames > 0) {
+                                    this.spawnFloatingText("PERFECT DODGE!", target.x, target.y - 45, "#facc15");
+                                    this.triggerPerfectDodge();
+                                } else {
+                                    this.resolveHit(beam.isEnemy ? e : p, target, beam.move);
+                                }
+                            }
+                        }
+                        if (beam.activeTimer <= 0) {
+                            this.beams.splice(i, 1);
+                        }
+                    }
+                }
+
+                // 5. AoE Waves Update
+                for (let i = this.aoeWaves.length - 1; i >= 0; i--) {
+                    const w = this.aoeWaves[i];
+                    w.radius += 240 * dt;
+                    w.alpha -= dt * 1.5;
+
+                    const target = w.isEnemy ? p : e;
+                    const dist = Math.hypot(w.x - target.x, w.y - target.y);
+                    if (dist < w.radius && dist > w.radius - 35) {
+                        if (!(w.isEnemy && target.iFrames > 0)) {
+                            this.resolveHit(w.isEnemy ? e : p, target, w.move);
+                        }
+                    }
+
+                    if (w.radius >= w.maxRadius || w.alpha <= 0) {
+                        this.aoeWaves.splice(i, 1);
+                    }
+                }
+
+                // 6. Hazards & Terrain Update
+                for (let i = this.hazards.length - 1; i >= 0; i--) {
+                    const hz = this.hazards[i];
+                    hz.timer -= dt;
+                    if (hz.timer <= 0) this.hazards.splice(i, 1);
+                }
+
+                // 7. Particles Update
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    const pt = this.particles[i];
+                    pt.x += pt.vx * dt;
+                    pt.y += pt.vy * dt;
+                    pt.z += pt.vz * dt;
+                    pt.vz -= 300 * dt; // gravity
+                    pt.life -= dt;
+                    pt.alpha = Math.max(0, pt.life / 0.6);
+                    if (pt.life <= 0 || pt.z < 0) this.particles.splice(i, 1);
+                }
+
+                // 8. Floating Texts Update
+                for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
+                    const ft = this.floatingTexts[i];
+                    ft.y += ft.vy * dt;
+                    ft.life -= dt;
+                    ft.alpha = Math.max(0, ft.life / 0.85);
+                    if (ft.life <= 0) this.floatingTexts.splice(i, 1);
+                }
+
+                // Overdrive Timer
+                if (this.overdriveTimer > 0) {
+                    this.overdriveTimer -= dt;
+                    if (this.overdriveTimer <= 0) {
+                        document.getElementById('speedLinesOverlay').style.opacity = '0';
+                    }
+                }
+            },
+
+            triggerPerfectDodge() {
+                SoundEngine.playSfx('perfect_dodge');
+                this.bondSync = Math.min(100, this.bondSync + 25);
+                this.player.stamina = Math.min(100, this.player.stamina + 35);
+                this.spawnFloatingText("見切り! PERFECT DODGE!", this.player.x, this.player.y - 50, "#facc15");
+                document.getElementById('perfectDodgeFlash').style.opacity = '1';
+                setTimeout(() => {
+                    document.getElementById('perfectDodgeFlash').style.opacity = '0';
+                }, 220);
+            },
+
+            updateAi(dt) {
+                const e = this.enemy;
+                const p = this.player;
+                if (e.fainted) return;
+
+                const dist = Math.hypot(p.x - e.x, p.y - e.y);
+                this.ai.thinkTimer -= dt;
+
+                if (this.ai.thinkTimer <= 0) {
+                    this.ai.thinkTimer = 1.2 + Math.random() * 1.1;
+                    const rand = Math.random();
+                    if (dist > 320) {
+                        this.ai.state = 'APPROACH';
+                    } else if (rand < 0.45) {
+                        this.ai.state = 'ATTACK';
+                    } else if (rand < 0.75) {
+                        this.ai.state = 'STRAFE';
+                        this.ai.strafeDir = Math.random() > 0.5 ? 1 : -1;
+                    } else {
+                        this.ai.state = 'RETREAT';
+                    }
+                }
+
+                const eSpeed = this.getFighterMoveSpeed(e) * 0.9;
+                if (this.ai.state === 'APPROACH') {
+                    const angle = Math.atan2(p.y - e.y, p.x - e.x);
+                    e.x += Math.cos(angle) * eSpeed * dt;
+                    e.y += Math.sin(angle) * eSpeed * dt;
+                    e.facing = Math.sign(p.x - e.x) || e.facing;
+                    if (dist < 260) this.ai.state = 'ATTACK';
+                } else if (this.ai.state === 'STRAFE') {
+                    const angle = Math.atan2(p.y - e.y, p.x - e.x) + (Math.PI / 2) * this.ai.strafeDir;
+                    e.x += Math.cos(angle) * eSpeed * 0.75 * dt;
+                    e.y += Math.sin(angle) * eSpeed * 0.75 * dt;
+                    e.facing = Math.sign(p.x - e.x) || e.facing;
+                } else if (this.ai.state === 'RETREAT') {
+                    const angle = Math.atan2(e.y - p.y, e.x - p.x);
+                    e.x += Math.cos(angle) * eSpeed * dt;
+                    e.y += Math.sin(angle) * eSpeed * dt;
+                }
+
+                // Clamp enemy bounds
+                e.x = Math.max(-this.WORLD_HALF_W + 35, Math.min(this.WORLD_HALF_W - 35, e.x));
+                e.y = Math.max(-this.WORLD_HALF_H + 35, Math.min(this.WORLD_HALF_H - 35, e.y));
+
+                // Enemy Attacks
+                this.ai.attackCooldown -= dt;
+                if (this.ai.attackCooldown <= 0 && dist < 420) {
+                    this.ai.attackCooldown = 2.4 + Math.random() * 1.6;
+                    const readyMoves = e.moves.filter(m => m.cooldown <= 0);
+                    if (readyMoves.length > 0) {
+                        const m = readyMoves[Math.floor(Math.random() * readyMoves.length)];
+                        m.cooldown = m.cooldownMax;
+                        this.triggerAnimeCallout(this.enemyTrainer, `"${e.name}, unleash ${m.name}!"`, '#ef4444');
+
+                        if (m.archetype === 'BEAM') {
+                            this.spawnBeam(e.x, e.y, p.x, p.y, m, true);
+                        } else if (m.archetype === 'AOE') {
+                            this.spawnAoeWave(e.x, e.y, m, true);
+                        } else {
+                            this.spawnProjectile(e.x, e.y, p.x, p.y, m, true);
+                        }
+                    }
+                }
+
+                e.moves.forEach(m => {
+                    if (m.cooldown > 0) m.cooldown = Math.max(0, m.cooldown - dt);
+                });
+            },
+
+            resolveHit(attacker, defender, move) {
+                if (defender.fainted) return;
+
+                // Check Counter-Shield or Guard
+                let finalDmg = 0;
+                let isSuperEffective = false;
+                let isNotEffective = false;
+                let crit = Math.random() < 0.08 ? 1.5 : 1.0;
+
+                const isSpecial = move.damageClass === 'special';
+                const atkStat = isSpecial ? attacker.stats.spAtk : attacker.stats.attack;
+                const defStat = isSpecial ? defender.stats.spDef : defender.stats.defense;
+
+                // Type Effectiveness calculation
+                let typeMultiplier = 1.0;
+                defender.types.forEach(defType => {
+                    if (TYPE_CHART[move.type] && TYPE_CHART[move.type][defType] !== undefined) {
+                        typeMultiplier *= TYPE_CHART[move.type][defType];
+                    }
+                });
+
+                if (typeMultiplier > 1.0) isSuperEffective = true;
+                if (typeMultiplier < 1.0 && typeMultiplier > 0) isNotEffective = true;
+
+                // STAB calculation
+                const stab = attacker.types.includes(move.type) ? 1.5 : 1.0;
+
+                // Field Terrain Reaction checks
+                let puddleCombo = false;
+                this.hazards.forEach(hz => {
+                    const d = Math.hypot(hz.x - defender.x, hz.y - defender.y);
+                    if (d < hz.radius + defender.radius) {
+                        if (hz.type === 'puddle' && move.type === 'electric') {
+                            puddleCombo = true;
+                        }
+                    }
+                });
+
+                let terrainBonus = puddleCombo ? 1.35 : 1.0;
+                if (puddleCombo) {
+                    this.spawnExplosion(defender.x, defender.y, '#facc15');
+                    this.logAnnouncer(`⚡ Water Puddle electrified into high-voltage plasma!`, 'amber');
+                }
+
+                // Official Damage Formula
+                const baseDmg = (((2 * attacker.level / 5 + 2) * move.power * (atkStat / defStat)) / 50 + 2);
+                finalDmg = Math.max(6, Math.floor(baseDmg * stab * typeMultiplier * crit * (0.88 + Math.random() * 0.24) * terrainBonus));
+
+                // Counter-Shield or Guard Reductions
+                if (defender === this.player && defender.counterShieldTimer > 0) {
+                    finalDmg = Math.floor(finalDmg * 0.35);
+                    this.spawnFloatingText("COUNTER-SHIELD!", defender.x, defender.y - 40, "#a855f7");
+                    SoundEngine.playSfx('counter_shield');
+                } else if (defender.guarding) {
+                    finalDmg = Math.floor(finalDmg * 0.45);
+                    this.spawnFloatingText("GUARDED", defender.x, defender.y - 35, "#facc15");
+                }
+
+                if (attacker === this.player && this.overdriveTimer > 0) {
+                    finalDmg = Math.floor(finalDmg * 1.35);
+                }
+
+                defender.currentHp = Math.max(0, defender.currentHp - finalDmg);
+                SoundEngine.playSfx(isSuperEffective ? 'hit_super' : 'hit_normal');
+                this.spawnFloatingText(`-${finalDmg}`, defender.x, defender.y - 45, isSuperEffective ? '#f87171' : '#f8fafc');
+
+                // Spawn Hazards on Water/Fire moves
+                if (move.type === 'water') {
+                    this.hazards.push({ type: 'puddle', x: defender.x, y: defender.y, radius: 55, timer: 14 });
+                } else if (move.type === 'fire') {
+                    this.hazards.push({ type: 'magma', x: defender.x, y: defender.y, radius: 45, timer: 10 });
+                }
+
+                // Log announcement
+                const effText = isSuperEffective ? 'It\'s super effective!' : (isNotEffective ? 'It\'s not very effective...' : '');
+                this.logAnnouncer(`${attacker.name}'s ${move.name} hits ${defender.name} for ${finalDmg} damage! ${effText}`, defender === this.player ? 'red' : 'cyan');
+
+                this.updateHud();
+
+                if (defender.currentHp <= 0) {
+                    this.handleFaint(defender);
+                }
+            },
+
+            handleFaint(faintedPk) {
+                faintedPk.fainted = true;
+                this.spawnExplosion(faintedPk.x, faintedPk.y, '#ef4444');
+                SoundEngine.playCry(faintedPk.cry);
+                this.logAnnouncer(`${faintedPk.name} has fainted!`, 'red');
+
+                if (faintedPk === this.player) {
+                    // Find next living pokemon
+                    const nextIdx = this.playerParty.findIndex(p => !p.fainted);
+                    if (nextIdx !== -1) {
+                        this.switchPokemon(nextIdx);
+                    } else {
+                        this.endMatch(false);
+                    }
+                } else {
+                    // Find next enemy pokemon
+                    const nextIdx = this.enemyParty.findIndex(p => !p.fainted);
+                    if (nextIdx !== -1) {
+                        this.enemyActiveIdx = nextIdx;
+                        this.enemy.x = 240;
+                        this.enemy.y = -30;
+                        this.updateHud();
+                        this.logAnnouncer(`${this.enemyTrainer} sends out ${this.enemy.name}!`, 'red');
+                    } else {
+                        this.endMatch(true);
+                    }
+                }
+            },
+
+            endMatch(playerWon) {
+                this.matchOver = true;
+                document.getElementById('resultTitle').innerText = playerWon ? 'VICTORY!' : 'DEFEAT...';
+                document.getElementById('resultSubtitle').innerText = playerWon ? `${this.playerTrainer} triumphs in an unforgettable stadium showdown!` : `${this.enemyTrainer} claims the World Coronation crown.`;
+                document.getElementById('resultTrophyIcon').innerHTML = playerWon ? '<i class="fa-solid fa-trophy text-yellow-400"></i>' : '<i class="fa-solid fa-skull text-red-500"></i>';
+                document.getElementById('resultModal').classList.remove('hidden');
+            },
+
+            updateHud() {
+                const p = this.player;
+                const e = this.enemy;
+                if (!p || !e) return;
+
+                // Player HUD
+                document.getElementById('playerNameHud').innerText = p.name;
+                const pHpPct = Math.max(0, (p.currentHp / p.maxHp) * 100);
+                const pBar = document.getElementById('playerHpBar');
+                pBar.style.width = `${pHpPct}%`;
+                pBar.className = `h-full rounded-xs transition-all duration-150 ${pHpPct > 50 ? 'bg-emerald-500' : (pHpPct > 20 ? 'bg-amber-400' : 'bg-red-500')}`;
+                document.getElementById('playerHpText').innerText = `${p.currentHp} / ${p.maxHp} HP`;
+                document.getElementById('playerSpeedStat').innerText = p.stats.speed;
+                document.getElementById('playerAtkStat').innerText = p.stats.attack;
+                document.getElementById('playerStaminaBar').style.width = `${p.stamina}%`;
+                document.getElementById('playerStaminaText').innerText = `${Math.floor(p.stamina)}%`;
+                document.getElementById('playerBondBar').style.width = `${this.bondSync}%`;
+                document.getElementById('playerBondText').innerText = `${this.bondSync}%`;
+
+                // Overdrive button state
+                const ovBtn = document.getElementById('overdriveBtn');
+                ovBtn.disabled = this.bondSync < 100 || this.overdriveTimer > 0;
+
+                // Enemy HUD
+                document.getElementById('enemyNameHud').innerText = e.name;
+                const eHpPct = Math.max(0, (e.currentHp / e.maxHp) * 100);
+                const eBar = document.getElementById('enemyHpBar');
+                eBar.style.width = `${eHpPct}%`;
+                eBar.className = `h-full rounded-xs transition-all duration-150 ${eHpPct > 50 ? 'bg-emerald-500' : (eHpPct > 20 ? 'bg-amber-400' : 'bg-red-500')}`;
+                document.getElementById('enemyHpText').innerText = `${e.currentHp} / ${e.maxHp} HP`;
+                document.getElementById('enemyStaminaBar').style.width = `${e.stamina}%`;
+
+                // Types & Party Balls
+                this.renderTypeBadges('playerTypesHud', p.types);
+                this.renderTypeBadges('enemyTypesHud', e.types);
+                this.renderPartyBalls();
+
+                // Sprite Image tags
+                const pImg = document.getElementById('playerSpriteImg');
+                const eImg = document.getElementById('enemySpriteImg');
+
+                if (p.sprite && pImg.src !== p.sprite) pImg.src = p.sprite;
+                if (e.sprite && eImg.src !== e.sprite) eImg.src = e.sprite;
+
+                // Actor positions in 2.5D stage
+                const pScreen = this.worldToScreen(p.x, p.y, p.z);
+                const eScreen = this.worldToScreen(e.x, e.y, e.z);
+
+                const pActor = document.getElementById('playerActor');
+                const eActor = document.getElementById('enemyActor');
+
+                pActor.style.transform = `translate(${pScreen.x - 48}px, ${pScreen.y - 85}px) scale(${pScreen.scale}) scaleX(${p.facing})`;
+                eActor.style.transform = `translate(${eScreen.x - 48}px, ${eScreen.y - 85}px) scale(${eScreen.scale}) scaleX(${e.facing})`;
+
+                // Hit flash & Overdrive CSS filters
+                pImg.className = `sprite-pixelated w-24 h-24 object-contain ${p.dashTimer > 0 ? 'sprite-iframe-ghost' : ''} ${this.overdriveTimer > 0 ? 'sprite-overdrive-glow' : ''}`;
+                eImg.className = `sprite-pixelated w-24 h-24 object-contain`;
+            },
+
+            renderTypeBadges(containerId, types) {
+                const c = document.getElementById(containerId);
+                c.innerHTML = types.map(t => {
+                    const cfg = TYPE_COLORS[t] || { bg: 'bg-slate-700', border: 'border-slate-500' };
+                    return `<span class="px-1.5 py-0.2 rounded text-[9px] font-black uppercase text-white ${cfg.bg} border ${cfg.border}">${t}</span>`;
+                }).join('');
+            },
+
+            renderPartyBalls() {
+                const pContainer = document.getElementById('playerPartyBalls');
+                pContainer.innerHTML = this.playerParty.map((pk, i) => `
+                    <span class="w-3 h-3 rounded-full border border-slate-700 flex items-center justify-center ${pk.fainted ? 'bg-slate-800 opacity-40' : (i === this.playerActiveIdx ? 'bg-cyan-400 shadow-[0_0_8px_#22d3ee]' : 'bg-red-500')}"></span>
+                `).join('');
+
+                const eContainer = document.getElementById('enemyPartyBalls');
+                eContainer.innerHTML = this.enemyParty.map((pk, i) => `
+                    <span class="w-3 h-3 rounded-full border border-slate-700 flex items-center justify-center ${pk.fainted ? 'bg-slate-800 opacity-40' : (i === this.enemyActiveIdx ? 'bg-red-500 shadow-[0_0_8px_#ef4444]' : 'bg-slate-600')}"></span>
+                `).join('');
+            },
+
+            renderPartySwitchBar() {
+                const bar = document.getElementById('partySwitchBar');
+                bar.innerHTML = this.playerParty.map((pk, i) => `
+                    <button onclick="GameEngine.switchPokemon(${i})" ${pk.fainted ? 'disabled' : ''} class="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase transition border ${i === this.playerActiveIdx ? 'bg-cyan-500 text-slate-950 border-white shadow' : (pk.fainted ? 'bg-slate-800 text-slate-600 border-slate-700 cursor-not-allowed' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700')}">
+                        ${pk.name.substring(0, 7)}
+                    </button>
+                `).join('');
+            },
+
+            renderMovesDeck() {
+                const p = this.player;
+                const grid = document.getElementById('movesGrid');
+                if (!p) return;
+
+                grid.innerHTML = p.moves.map((m, i) => {
+                    const typeCfg = TYPE_COLORS[m.type] || { bg: 'bg-slate-700', hex: '#94a3b8' };
+                    const isCd = m.cooldown > 0;
+                    const cdPct = isCd ? Math.round((m.cooldown / m.cooldownMax) * 100) : 0;
+
+                    return `
+                        <button onclick="GameEngine.useMove(${i})" ${isCd ? 'disabled' : ''} class="relative group overflow-hidden rounded-xl p-2.5 bg-slate-950/80 hover:bg-slate-900 border-2 ${isCd ? 'border-slate-800 opacity-60 cursor-not-allowed' : 'border-slate-700 hover:border-cyan-400'} shadow-lg transition flex flex-col justify-between text-left">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="px-1.5 py-0.5 rounded text-[9px] font-black uppercase text-white ${typeCfg.bg}">${m.type}</span>
+                                <div class="flex items-center gap-1">
+                                    <span class="text-[9px] font-black px-1.5 py-0.2 rounded bg-slate-900 text-yellow-400 border border-slate-800">${m.archetype}</span>
+                                    <span class="text-[9px] font-mono font-bold text-slate-400"><kbd class="px-1 bg-slate-900 rounded text-cyan-300">${i+1}</kbd></span>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 class="font-extrabold text-xs sm:text-sm uppercase tracking-wide text-white truncate">${m.name}</h4>
+                                <div class="flex items-center justify-between text-[10px] font-bold text-slate-400 mt-0.5">
+                                    <span>PWR <b class="text-yellow-400">${m.power}</b></span>
+                                    <span>PP ${m.pp}/${m.maxPp}</span>
+                                </div>
+                            </div>
+                            ${isCd ? `<div class="absolute inset-0 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center font-mono font-black text-sm text-cyan-400">${m.cooldown.toFixed(1)}s</div>` : ''}
+                        </button>
+                    `;
+                }).join('');
+            },
+
+            // ==================== STADIUM 2.5D RENDERER ====================
+            renderFrame() {
+                if (!this.ctx) return;
+                const ctx = this.ctx;
+                ctx.clearRect(0, 0, this.width, this.height);
+
+                // 1. Draw Realistic Pokémon League Colosseum Background
+                const grad = ctx.createLinearGradient(0, 0, 0, this.height);
+                grad.addColorStop(0, '#04060b');
+                grad.addColorStop(0.5, '#090d19');
+                grad.addColorStop(1, '#020408');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, this.width, this.height);
+
+                // Stadium Floodlight Beams
+                ctx.save();
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.035)';
+                ctx.beginPath();
+                ctx.moveTo(this.width * 0.15, 0);
+                ctx.lineTo(this.width * 0.35, this.height * 0.65);
+                ctx.lineTo(this.width * 0.05, this.height * 0.65);
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.moveTo(this.width * 0.85, 0);
+                ctx.lineTo(this.width * 0.65, this.height * 0.65);
+                ctx.lineTo(this.width * 0.95, this.height * 0.65);
+                ctx.fill();
+                ctx.restore();
+
+                // 2. Cheering Crowd Spectators in Stands
+                this.crowdSpectators.forEach((sp, idx) => {
+                    const sy = 30 + sp.row * 18;
+                    const sx = sp.pct * this.width;
+                    const bounce = Math.sin(this.matchElapsed * sp.speed + sp.phase) * 3;
+                    ctx.fillStyle = sp.color;
+                    ctx.fillRect(sx, sy + bounce, 4, 6);
+                });
+
+                // 3. 2.5D Stadium Court (Perspective Oval / Turf)
+                const cx = this.width * 0.5 + this.camera.x;
+                const cy = this.height * 0.54 + this.camera.y;
+
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.scale(1, this.Y_SCALE);
+
+                // Outer Stadium Wall & LED Perimeter Ribbon
+                ctx.beginPath();
+                ctx.arc(0, 0, this.WORLD_HALF_W + 35, 0, Math.PI * 2);
+                ctx.fillStyle = '#0f172a';
+                ctx.fill();
+                ctx.lineWidth = 6;
+                ctx.strokeStyle = '#38bdf8';
+                ctx.stroke();
+
+                // Main Turf
+                ctx.beginPath();
+                ctx.arc(0, 0, this.WORLD_HALF_W, 0, Math.PI * 2);
+                ctx.fillStyle = '#111827';
+                ctx.fill();
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = '#1e293b';
+                ctx.stroke();
+
+                // Mowed Turf Stripes & Center Pokéball Emblem
+                ctx.save();
+                ctx.clip();
+                for (let x = -this.WORLD_HALF_W; x < this.WORLD_HALF_W; x += 55) {
+                    ctx.fillStyle = (x / 55) % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.04)';
+                    ctx.fillRect(x, -this.WORLD_HALF_H, 55, this.WORLD_HALF_H * 2);
+                }
+                ctx.restore();
+
+                // Center Pokéball Motif
+                ctx.beginPath();
+                ctx.arc(0, 0, 75, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(250, 204, 21, 0.25)';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.arc(0, 0, 18, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(250, 204, 21, 0.35)';
+                ctx.fill();
+
+                ctx.restore();
+
+                // 4. Draw Hazards (Puddles, Magma)
+                this.hazards.forEach(hz => {
+                    const scr = this.worldToScreen(hz.x, hz.y, 0);
+                    ctx.save();
+                    ctx.translate(scr.x, scr.y);
+                    ctx.scale(1, this.Y_SCALE);
+                    ctx.beginPath();
+                    ctx.arc(0, 0, hz.radius * scr.scale, 0, Math.PI * 2);
+                    ctx.fillStyle = hz.type === 'puddle' ? 'rgba(56, 189, 248, 0.35)' : 'rgba(249, 115, 22, 0.4)';
+                    ctx.fill();
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = hz.type === 'puddle' ? '#38bdf8' : '#f97316';
+                    ctx.stroke();
+                    ctx.restore();
+                });
+
+                // 5. Draw Projectiles
+                this.projectiles.forEach(proj => {
+                    const scr = this.worldToScreen(proj.x, proj.y, proj.z);
+                    const cfg = TYPE_COLORS[proj.move.type] || { hex: '#facc15' };
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(scr.x, scr.y, proj.radius * scr.scale, 0, Math.PI * 2);
+                    ctx.fillStyle = cfg.hex;
+                    ctx.shadowColor = cfg.hex;
+                    ctx.shadowBlur = 14;
+                    ctx.fill();
+                    ctx.restore();
+                });
+
+                // 6. Draw Beams (Telegraphed laser lines & active beams)
+                this.beams.forEach(beam => {
+                    const scr = this.worldToScreen(beam.x, beam.y, 10);
+                    const cfg = TYPE_COLORS[beam.move.type] || { hex: '#38bdf8' };
+                    ctx.save();
+                    ctx.strokeStyle = beam.fired ? cfg.hex : 'rgba(239, 68, 68, 0.55)';
+                    ctx.lineWidth = beam.fired ? 24 * (this.camera.zoom) : 3;
+                    if (!beam.fired) ctx.setLineDash([8, 6]);
+                    ctx.beginPath();
+                    ctx.moveTo(scr.x, scr.y);
+                    ctx.lineTo(scr.x + Math.cos(beam.angle) * 1100, scr.y + Math.sin(beam.angle) * 1100);
+                    ctx.shadowColor = cfg.hex;
+                    ctx.shadowBlur = beam.fired ? 22 : 0;
+                    ctx.stroke();
+                    ctx.restore();
+                });
+
+                // 7. Draw AoE Waves
+                this.aoeWaves.forEach(w => {
+                    const scr = this.worldToScreen(w.x, w.y, 0);
+                    const cfg = TYPE_COLORS[w.move.type] || { hex: '#facc15' };
+                    ctx.save();
+                    ctx.translate(scr.x, scr.y);
+                    ctx.scale(1, this.Y_SCALE);
+                    ctx.beginPath();
+                    ctx.arc(0, 0, w.radius * scr.scale, 0, Math.PI * 2);
+                    ctx.strokeStyle = cfg.hex;
+                    ctx.lineWidth = 4;
+                    ctx.globalAlpha = Math.max(0, w.alpha);
+                    ctx.stroke();
+                    ctx.restore();
+                });
+
+                // 8. Draw Particles
+                this.particles.forEach(pt => {
+                    const scr = this.worldToScreen(pt.x, pt.y, pt.z);
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(scr.x, scr.y, pt.radius * this.camera.zoom, 0, Math.PI * 2);
+                    ctx.fillStyle = pt.color;
+                    ctx.globalAlpha = pt.alpha;
+                    ctx.shadowColor = pt.color;
+                    ctx.shadowBlur = 8;
+                    ctx.fill();
+                    ctx.restore();
+                });
+
+                // 9. Draw Floating Numbers & Text Callouts
+                this.floatingTexts.forEach(ft => {
+                    const scr = this.worldToScreen(ft.x, ft.y, 25);
+                    ctx.save();
+                    ctx.font = '900 15px "Chakra Petch", sans-serif';
+                    ctx.fillStyle = ft.color;
+                    ctx.globalAlpha = ft.alpha;
+                    ctx.shadowColor = '#000';
+                    ctx.shadowBlur = 6;
+                    ctx.textAlign = 'center';
+                    ctx.fillText(ft.text, scr.x, scr.y);
+                    ctx.restore();
+                });
+            }
+        };
+
+        window.onload = function () {
+            GameEngine.init();
+        };
+    </script>
+</body>
+</html>

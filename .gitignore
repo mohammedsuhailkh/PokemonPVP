@@ -1,0 +1,10 @@
+node_modules/
+dist/
+test-results/
+playwright-report/
+.reference/
+.env
+.env.*
+!.env.example
+*.log
+__pycache__/
